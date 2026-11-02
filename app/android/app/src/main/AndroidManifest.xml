@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Internet: para a fonte Nunito Sans e, mais tarde, para a API. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:label="keepwell"
         android:name="${applicationName}"

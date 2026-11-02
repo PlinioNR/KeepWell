@@ -33,9 +33,12 @@ ODS 12: meta 12.5 (principal, prevenção de resíduos), 12.2 (complementar). Im
 - Foco atual (02/11): iniciar o desenvolvimento da app.
 
 ## Estrutura do repositório
-- `app/` — app Flutter (pacote `keepwell`, org `pt.esmad`, só Android). Criada 02/11 com `flutter create`; ainda é o exemplo do contador.
+- `app/` — app Flutter (pacote `keepwell`, org `pt.esmad`, só Android).
+  - `lib/theme/`: `app_colors.dart`, `app_spacing.dart` (espaços e raios), `app_theme.dart` (claro/escuro, fonte Nunito Sans via google_fonts). Valores tirados das variáveis do Figma em 02/11.
+  - Modo escuro: cores propostas no código; ainda não existem variáveis de modo escuro no Figma.
+  - `main.dart` mostra um ecrã temporário `ThemePreviewScreen`.
 - `api/` — backend (ainda não criado; tecnologia por escolher).
-- Git iniciado em 02/11 no ramo `main`, sem commits.
+- Git no ramo `main`; remoto `origin` = https://github.com/PlinioNR/KeepWell (enviado a 02/11).
 
 ## Requisitos técnicos confirmados
 Flutter obrigatório; demo em Android; API REST própria via HTTP; BD modelada; documentação da API; ≥2 tipos de utilizador; CRUD de entidades; câmara (confirmada pelo docente como sensor); funcionalidade nativa; animações; layout cuidado; uso adequado de Stateful/Stateless.
