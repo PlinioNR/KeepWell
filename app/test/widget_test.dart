@@ -7,11 +7,11 @@ void main() {
   // Nos testes não há Internet para descarregar a fonte.
   GoogleFonts.config.allowRuntimeFetching = false;
 
-  testWidgets('A app arranca com o ecrã de pré-visualização do tema',
-      (tester) async {
+  testWidgets('A app abre no ecrã Welcome com os dois botões', (tester) async {
     await tester.pumpWidget(const KeepWellApp());
 
-    expect(find.text('Tema KeepWell'), findsOneWidget);
-    expect(find.text('GUARDAR OBJETO'), findsOneWidget);
+    expect(find.bySemanticsLabel('Logótipo KeepWell'), findsOneWidget);
+    expect(find.text('ENTRAR'), findsOneWidget);
+    expect(find.text('CRIAR CONTA'), findsOneWidget);
   });
 }

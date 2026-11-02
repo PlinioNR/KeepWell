@@ -16,7 +16,7 @@ abstract final class AppTheme {
         const ColorScheme(
           brightness: Brightness.light,
           primary: AppColors.primary500,
-          onPrimary: AppColors.white,
+          onPrimary: AppColors.secondary100,
           secondary: AppColors.accent500,
           onSecondary: AppColors.primary500,
           error: AppColors.danger600,
@@ -26,7 +26,9 @@ abstract final class AppTheme {
           onSurfaceVariant: AppColors.primary400,
           outline: AppColors.primary200,
         ),
-        scaffold: AppColors.secondary100,
+        // No Figma o fundo dos ecrãs é neutral/white.
+        scaffold: AppColors.white,
+        outlinedButtonFill: AppColors.secondary100,
       );
 
   // O modo escuro ainda não existe no Figma: estas cores são uma proposta
@@ -46,9 +48,14 @@ abstract final class AppTheme {
           outline: AppColors.primary400,
         ),
         scaffold: AppColors.primary800,
+        outlinedButtonFill: Colors.transparent,
       );
 
-  static ThemeData _build(ColorScheme colors, {required Color scaffold}) {
+  static ThemeData _build(
+    ColorScheme colors, {
+    required Color scaffold,
+    required Color outlinedButtonFill,
+  }) {
     final textTheme = _textTheme(colors.onSurface);
 
     return ThemeData(
@@ -75,6 +82,7 @@ abstract final class AppTheme {
         style: OutlinedButton.styleFrom(
           minimumSize: const Size.fromHeight(48),
           foregroundColor: colors.primary,
+          backgroundColor: outlinedButtonFill,
           side: BorderSide(color: colors.primary),
           textStyle: textTheme.labelLarge,
           shape: RoundedRectangleBorder(
@@ -124,7 +132,7 @@ abstract final class AppTheme {
       bodyLarge: style(16, FontWeight.w400, 24),
       bodyMedium: style(14, FontWeight.w400, 20, 0.1),
       bodySmall: style(12, FontWeight.w400, 16, 0.4),
-      labelLarge: style(14, FontWeight.w600, 20, 0.1),
+      labelLarge: style(14, FontWeight.w600, 20, 0.5),
       labelMedium: style(14, FontWeight.w600, 20, 0.1),
       labelSmall: style(12, FontWeight.w600, 16, 0.5),
     );

@@ -11,6 +11,8 @@ Disciplinas: Gestão de Projetos (GP), Usabilidade e UX, Prototipagem em Apl. M�
 - Âmbito viável para dois iniciantes. Não acrescentar funcionalidades sem explicar necessidade e custo.
 - Separar sempre: requisitos obrigatórios / decisões propostas / melhorias opcionais.
 - No código: indicar ficheiro, local, razão e como verificar.
+- Código limpo, simples e fácil de entender para iniciantes: nomes claros, ficheiros pequenos, sem arquiteturas avançadas (nada de BLoC/Riverpod; `setState` e classes simples chegam). Bem documentado: comentários em português a explicar o propósito de cada classe e de cada parte menos óbvia.
+- Sempre que se escreve código novo, explicar passo a passo ao Plinio (o que cada parte faz e porquê), para ele perceber e conseguir explicar o código na apresentação.
 - Nunca assumir que algo foi implementado, aprovado ou entregue só porque foi planeado. Distinguir concluído de planeado.
 
 ## Conceito
@@ -36,7 +38,10 @@ ODS 12: meta 12.5 (principal, prevenção de resíduos), 12.2 (complementar). Im
 - `app/` — app Flutter (pacote `keepwell`, org `pt.esmad`, só Android).
   - `lib/theme/`: `app_colors.dart`, `app_spacing.dart` (espaços e raios), `app_theme.dart` (claro/escuro, fonte Nunito Sans via google_fonts). Valores tirados das variáveis do Figma em 02/11.
   - Modo escuro: cores propostas no código; ainda não existem variáveis de modo escuro no Figma.
-  - `main.dart` mostra um ecrã temporário `ThemePreviewScreen`.
+  - `lib/screens/`: um ficheiro por ecrã. Feito: `welcome_screen.dart` (01 Welcome; botões ainda sem navegação; usa a logo do Plinio em vez do ícone do Figma).
+  - `assets/images/logo.png`: logo (PNG 429×390 tirado de uma captura; falta versão em maior resolução ou SVG exportada do Illustrator, original em Documents\PAM\logo 5.ai). No modo escuro é pintada de creme.
+  - Ícones: pacote `lucide_icons_flutter` (mesma família Lucide do Figma).
+  - Fundo dos ecrãs = branco (neutral/white), como no Figma.
 - `api/` — backend (ainda não criado; tecnologia por escolher).
 - Git no ramo `main`; remoto `origin` = https://github.com/PlinioNR/KeepWell (enviado a 02/11).
 
