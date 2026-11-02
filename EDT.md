@@ -1,13 +1,12 @@
-# KeepWell — EDT (rascunho de trabalho)
+# KeepWell — EDT
 
-Estado: níveis 1 e 2 validados pelo Plinio (02/11/2026). Nível 3 dos ramos 1–3 proposto, por validar. Ramos 4–7 ainda sem nível 3.
-Legenda: ✅ concluído (confirmado pelo Plinio) · ◐ iniciado · sem marca = planeado.
+Estado: níveis 1 e 2 validados pelo Plinio (02/11/2026). Nível 3 completo proposto, por validar.
+Entrega: PDF "GP-2627-E2-G1.pdf" até 06/11/2026 23h59. O enunciado pede: lista de todas as tarefas e organização lógica das tarefas (sem dicionário da EDT).
+Legenda: ✅ concluído · ◐ iniciado · sem marca = planeado.
 
 ## 1. Gestão do projeto
-- 1.1 Termo de Abertura ✅ (submissão por confirmar)
-- 1.2 EDT
-  - 1.2.1 Estrutura da EDT (diagrama em árvore)
-  - 1.2.2 Dicionário da EDT (se exigido pelo enunciado)
+- 1.1 Termo de Abertura ✅
+- 1.2 Estrutura de Decomposição do Trabalho (EDT) ◐
 - 1.3 Cronograma
   - 1.3.1 Lista de atividades e dependências
   - 1.3.2 Disponibilidade da equipa
@@ -28,16 +27,16 @@ Legenda: ✅ concluído (confirmado pelo Plinio) · ◐ iniciado · sem marca = 
   - 2.1.3 Critérios de verificação
 - 2.2 Regras de negócio
   - 2.2.1 Regras de eliminação
-  - 2.2.2 Regras do histórico
+  - 2.2.2 Regras do histórico e da repetição de tarefas
   - 2.2.3 Lista inicial de categorias
   - 2.2.4 Criação da conta de administrador
-- 2.3 Diagramas UML (tipos exigidos por confirmar)
+- 2.3 Diagramas UML
   - 2.3.1 Diagrama de casos de uso
   - 2.3.2 Diagrama de classes / modelo de dados
 - 2.4 Decisões técnicas
-  - 2.4.1 Escolha de backend e BD
+  - 2.4.1 Escolha de backend e base de dados ✅ (Node.js, Express, MongoDB)
   - 2.4.2 Armazenamento das fotografias
-  - 2.4.3 Ambiente de execução da API (testes e demo)
+  - 2.4.3 Ambiente de execução da API (testes e demonstração)
 
 ## 3. Design e usabilidade
 - 3.1 Card sorting
@@ -48,28 +47,21 @@ Legenda: ✅ concluído (confirmado pelo Plinio) · ◐ iniciado · sem marca = 
   - 3.2.1 Mapa de navegação
   - 3.2.2 Fluxos principais
 - 3.3 Sistema de design ◐
-  - 3.3.1 Revisão dos componentes existentes ◐ (páginas Icon, Button, Forms, List, Navigation, Cards, Feedback existem; ajustes por confirmar)
-  - 3.3.2 Componentes específicos do KeepWell ◐ (Object Card, Category Chip, Timeline Item, Care Item, Status Badge, Tip Card, Photo Upload, Date Field já usados nos ecrãs)
-  - 3.3.3 Fichas de especificação por componente (Ficha 3) e teste do conteúdo hostil (Ficha 4)
-  - 3.3.4 Modo escuro por variáveis e contraste verificado nos dois modos (Ficha 5)
-  - 3.3.5 Publicação da biblioteca
+  - 3.3.1 Fundações: cor, tipografia, espaçamento e grelha ✅
+  - 3.3.2 Componentes base com estados ◐
+  - 3.3.3 Componentes específicos do KeepWell ◐
+  - 3.3.4 Fichas de especificação e teste do conteúdo hostil
+  - 3.3.5 Modo escuro por variáveis e verificação de contraste
+  - 3.3.6 Publicação da biblioteca
 - 3.4 Protótipo interativo
-  - 3.4.1 Ecrãs do utilizador comum ◐ (14 ecrãs em 4 secções, verificado 02/11; ver desalinhamentos com o âmbito)
-  - 3.4.2 Ecrãs do administrador ◐ (5 ecrãs, verificado 02/11)
-  - 3.4.3 Ecrãs em falta (consultar dicas, editar objeto, estados vazio/erro — por confirmar)
-  - 3.4.4 Ligações, transições e overlays (checklist da Ficha 5: 2 fluxos condicionais, ≥1 overlay, 150–300 ms)
-  - 3.4.5 Handoff e revisão cruzada (Ficha 6)
-
-Decisão final (Plinio, 02/11): manter os ecrãs, exceto 04 Recover Access (vai para o Archive; o botão "Recuperar acesso" sai do 02 Sign In). Entram no âmbito: repetição de tarefas, lembretes/notificações e modo escuro (também na app Flutter). Alteração no Figma: por fazer.
-
-Desalinhamentos encontrados nos ecrãs (02/11):
-- 04 Recover Access: recuperação de palavra-passe não está no âmbito (exige envio de email no backend).
-- 11 Add Care / 12 Care Detail: campo "Repeat" (repetição automática está fora do âmbito).
-- 11 Add Care, 13 Notifications, 14 Settings: lembretes/notificações estão fora do âmbito.
-- Card sorting e AI deviam vir antes dos ecrãs (requisito de UX): ainda não feitos.
-- 3.5 Avaliação heurística e correções
-  - 3.5.1 Relatório de avaliação (4 problemas, regra, gravidade)
-  - 3.5.2 Três correções aplicadas
+  - 3.4.1 Ecrãs do utilizador comum ◐
+  - 3.4.2 Ecrãs do administrador ◐
+  - 3.4.3 Ajustes ao âmbito (arquivar Recuperar acesso) e ecrãs em falta
+  - 3.4.4 Ligações, transições e overlays
+  - 3.4.5 Handoff e revisão cruzada
+- 3.5 Avaliação heurística
+  - 3.5.1 Relatório de avaliação (4 problemas, regra violada, gravidade)
+  - 3.5.2 Três correções aplicadas no protótipo
 - 3.6 Testes com utilizadores
   - 3.6.1 Guião e tarefas
   - 3.6.2 Recrutamento de 3 participantes
@@ -77,30 +69,93 @@ Desalinhamentos encontrados nos ecrãs (02/11):
   - 3.6.4 Registo e análise de resultados
 
 ## 4. Backend e base de dados
-- 4.1 Base de dados
-- 4.2 Autenticação e permissões
-- 4.3 Endpoints da API
-- 4.4 Armazenamento de fotografias
-- 4.5 Documentação da API
+- 4.1 Projeto base da API
+  - 4.1.1 Projeto Node.js/Express e estrutura de pastas
+  - 4.1.2 Ligação à base de dados MongoDB
+  - 4.1.3 Dados iniciais (categorias, administrador, exemplos)
+- 4.2 Modelos de dados
+  - 4.2.1 Utilizador
+  - 4.2.2 Categoria
+  - 4.2.3 Objeto
+  - 4.2.4 Tarefa de manutenção
+  - 4.2.5 Dica
+- 4.3 Autenticação e permissões
+  - 4.3.1 Registo e início de sessão
+  - 4.3.2 Proteção das rotas por perfil (utilizador/administrador)
+- 4.4 Endpoints da API
+  - 4.4.1 Objetos (CRUD, pesquisa e filtro)
+  - 4.4.2 Tarefas (CRUD, concluir e histórico)
+  - 4.4.3 Repetição de tarefas
+  - 4.4.4 Categorias (CRUD do administrador)
+  - 4.4.5 Dicas (consulta e CRUD do administrador)
+- 4.5 Fotografias
+  - 4.5.1 Envio e armazenamento
+  - 4.5.2 Disponibilização das imagens à app
+- 4.6 Documentação da API
+  - 4.6.1 Recursos, URIs e métodos HTTP
+  - 4.6.2 Exemplos de pedidos e respostas
 
 ## 5. Aplicação Flutter
-- 5.1 Projeto base e ligação à API
+- 5.1 Base da aplicação
+  - 5.1.1 Projeto e tema (claro/escuro) ✅
+  - 5.1.2 Navegação entre ecrãs e barra de separadores
+  - 5.1.3 Serviço de ligação à API
 - 5.2 Conta
-- 5.3 Objetos e câmara
-- 5.4 Tarefas e histórico
+  - 5.2.1 Ecrã de boas-vindas ✅
+  - 5.2.2 Entrar
+  - 5.2.3 Criar conta
+  - 5.2.4 Terminar sessão
+- 5.3 Objetos
+  - 5.3.1 Início
+  - 5.3.2 Lista com pesquisa e filtro por categoria
+  - 5.3.3 Adicionar e editar objeto com fotografia (câmara)
+  - 5.3.4 Detalhe e eliminação do objeto
+  - 5.3.5 Histórico do objeto
+- 5.4 Cuidados
+  - 5.4.1 Lista com filtros por estado
+  - 5.4.2 Adicionar e editar cuidado
+  - 5.4.3 Detalhe, conclusão e eliminação
+  - 5.4.4 Lembretes (notificações locais)
+  - 5.4.5 Repetição de tarefas
 - 5.5 Dicas
-- 5.6 Administração
-- 5.7 Acabamentos (estados, animações, Stateful/Stateless)
+  - 5.5.1 Consulta de dicas por categoria
+- 5.6 Perfil
+  - 5.6.1 Definições e modo escuro
+- 5.7 Administração
+  - 5.7.1 Painel de administração
+  - 5.7.2 Gestão de categorias
+  - 5.7.3 Gestão de dicas
+- 5.8 Acabamentos
+  - 5.8.1 Estados de carregamento, erro e lista vazia
+  - 5.8.2 Validação de formulários
+  - 5.8.3 Animações
+  - 5.8.4 Revisão de Stateful/Stateless
 
 ## 6. Integração e testes
-- 6.1 Testes Flutter/API
+- 6.1 Testes de integração app/API
+  - 6.1.1 Percurso principal (objeto → tarefa → conclusão → histórico)
+  - 6.1.2 Persistência dos dados
 - 6.2 Testes de permissões e erros
+  - 6.2.1 Acesso por perfil
+  - 6.2.2 Formulários inválidos e eliminações
+  - 6.2.3 Falhas de ligação
+  - 6.2.4 Câmara e notificações sem permissão
 - 6.3 Testes em Android real
-- 6.4 Correções
+- 6.4 Correção de erros
 
 ## 7. Entrega e apresentação
 - 7.1 Apresentação intermédia
-- 7.2 Documentação final atualizada
-- 7.3 Relatório GP
-- 7.4 Apresentação final e demo
-- 7.5 Pacote de submissão (zip)
+  - 7.1.1 Slides
+  - 7.1.2 Ensaio
+- 7.2 Documentação final
+  - 7.2.1 Requisitos e UML atualizados
+  - 7.2.2 Documentação da API final
+  - 7.2.3 Documentação do sistema de design
+- 7.3 Relatório de GP
+- 7.4 Apresentação final
+  - 7.4.1 Slides
+  - 7.4.2 Dados e cenário de demonstração
+  - 7.4.3 Ensaio
+- 7.5 Submissões
+  - 7.5.1 Pacote de GP (relatório, MPP/POD e slides em zip)
+  - 7.5.2 Entregas das restantes disciplinas

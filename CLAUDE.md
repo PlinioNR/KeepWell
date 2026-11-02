@@ -47,8 +47,13 @@ ODS 12: meta 12.5 (principal, prevenção de resíduos), 12.2 (complementar). Im
 
 ## Requisitos técnicos confirmados
 Flutter obrigatório; demo em Android; API REST própria via HTTP; BD modelada; documentação da API; ≥2 tipos de utilizador; CRUD de entidades; câmara (confirmada pelo docente como sensor); funcionalidade nativa; animações; layout cuidado; uso adequado de Stateful/Stateless.
-Backend/BD por escolher (nas aulas: Node.js, Express, MongoDB — não assumir como escolha fechada).
-Nada de Flutter/API/BD implementado até à data deste ficheiro.
+Backend decidido (02/11): Node.js + Express + MongoDB (o que é dado nas aulas).
+Estado 02/11: app Flutter com tema e ecrã Welcome; API e BD ainda não começadas.
+
+## Prioridades e disponibilidade (02/11)
+- Disponibilidade: ~10–12 h/semana cada um, que eles consideram apertado → planear com folga e cortar cedo se necessário.
+- Ordem: 1) núcleo (login/registo → objetos com foto → tarefas → concluir → histórico, ligado à API) até à apresentação intermédia (13/12); 2) admin de categorias e dicas; 3) animações e acabamentos; 4) modo escuro; 5) lembretes (notificações locais); 6) repetição de tarefas por último (é a primeira a cortar).
+- Funcionalidades adicionais: só se o núcleo estiver pronto até meados de dezembro.
 
 ## Requisitos UX / Prototipagem
 - Card sorting (agrupamento, nomes de menus, mapa de navegação); arquitetura de informação antes dos ecrãs.
@@ -72,7 +77,7 @@ Gestão: proposta preenchida no Excel; Termo de Abertura concluído (segundo o P
 
 ## Prazos GP
 - 30/10/2026 23h59 Termo de Abertura
-- 06/11/2026 EDT/WBS
+- 06/11/2026 23h59 EDT/WBS — PDF "GP-2627-E2-G1.pdf" com lista de todas as tarefas e organização lógica (sem dicionário)
 - 14/11/2026 Cronograma
 - 21/11/2026 Projeto em MS Project / ProjectLibre
 - 28/11/2026 Requisitos funcionais e não funcionais
