@@ -103,7 +103,7 @@ Legenda: ✅ concluído · ◐ iniciado · sem marca = planeado.
 - 5.2 Conta
   - 5.2.1 Ecrã de boas-vindas ✅
   - 5.2.2 Entrar ◐ (ecrã e validação feitos; falta API)
-  - 5.2.3 Criar conta
+  - 5.2.3 Criar conta ◐ (ecrã e validação feitos; falta API)
   - 5.2.4 Terminar sessão
 - 5.3 Objetos
   - 5.3.1 Início

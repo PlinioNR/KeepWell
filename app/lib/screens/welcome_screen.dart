@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import 'sign_in_screen.dart';
+import 'sign_up_screen.dart';
 
 /// Ecrã 01 Welcome: a primeira coisa que o utilizador vê.
 ///
@@ -62,8 +63,10 @@ class WelcomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.md),
               OutlinedButton(
-                // O ecrã "Criar conta" ainda não existe; a navegação vem a seguir.
-                onPressed: () {},
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SignUpScreen()),
+                ),
                 child: const Text('CRIAR CONTA'),
               ),
             ],

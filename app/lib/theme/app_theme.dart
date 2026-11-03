@@ -119,6 +119,19 @@ abstract final class AppTheme {
           ),
         ),
       ),
+      // Checkbox do Figma: quadrado de cantos 4, borda Primary/300.
+      checkboxTheme: CheckboxThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+        side: const BorderSide(color: AppColors.primary300, width: 1.5),
+        // Marcada: fundo azul. Desmarcada: fundo igual ao dos campos.
+        fillColor: WidgetStateProperty.resolveWith(
+          (states) =>
+              states.contains(WidgetState.selected) ? colors.primary : inputFill,
+        ),
+        checkColor: WidgetStatePropertyAll(colors.onPrimary),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: inputFill,
