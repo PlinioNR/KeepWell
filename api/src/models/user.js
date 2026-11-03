@@ -19,7 +19,7 @@ export const userValidator = {
   }
 };
 
-// Recebe um hash já calculado pelo futuro serviço de autenticação, não a palavra-passe.
+// Recebe um hash já calculado pelo serviço de registo/autenticação, não a palavra-passe.
 // Apenas escolhemos os campos permitidos: nunca copiamos todo o pedido do cliente.
 export function buildUser({ name, email, passwordHash } = {}) {
   if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 100) {
@@ -71,3 +71,4 @@ export async function setupUsers(database) {
     collation: { locale: 'en', strength: 2 }
   });
 }
+
