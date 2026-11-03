@@ -19,10 +19,15 @@ String? validateEmail(String? value) {
   return null;
 }
 
-/// Palavra-passe de uma conta nova: pelo menos 8 caracteres.
+/// Palavra-passe de uma conta nova: de 6 a 20 caracteres, sem espaços.
+/// É a mesma regra da API (api/src/services/registration.js); se mudar
+/// num lado, tem de mudar no outro.
 String? validateNewPassword(String? value) {
   final password = value ?? '';
   if (password.isEmpty) return 'Escreva uma palavra-passe.';
-  if (password.length < 8) return 'Use pelo menos 8 caracteres.';
+  if (password.length < 6) return 'Use pelo menos 6 caracteres.';
+  if (password.length > 20) return 'Use no máximo 20 caracteres.';
+  // \s apanha qualquer espaço em branco: espaço, tabulação ou mudança de linha.
+  if (password.contains(RegExp(r'\s'))) return 'Não use espaços.';
   return null;
 }

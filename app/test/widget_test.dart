@@ -49,12 +49,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Crie a sua conta'), findsOneWidget);
 
-    // Palavra-passe com menos de 8 caracteres e termos por aceitar.
+    // Palavra-passe com menos de 6 caracteres e termos por aceitar.
     await tester.enterText(find.byType(TextFormField).at(2), '123');
     await tester.tap(find.widgetWithText(FilledButton, 'CRIAR CONTA'));
     await tester.pump();
     expect(find.text('Escreva o seu nome.'), findsOneWidget);
-    expect(find.text('Use pelo menos 8 caracteres.'), findsOneWidget);
+    expect(find.text('Use pelo menos 6 caracteres.'), findsOneWidget);
     expect(find.text('Tem de aceitar os termos para criar conta.'),
         findsOneWidget);
 

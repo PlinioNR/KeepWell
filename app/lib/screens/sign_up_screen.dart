@@ -115,7 +115,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     const SizedBox(height: AppSpacing.lg),
                     AppTextField(
                       label: 'Palavra-passe',
-                      hint: 'Mínimo de 6 caracteres',
+                      hint: '6 a 20 caracteres, sem espaços',
                       controller: _passwordController,
                       obscureText: true,
                       textInputAction: TextInputAction.done,
