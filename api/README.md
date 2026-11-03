@@ -1,6 +1,6 @@
 # KeepWell API
 
-Servidor Node.js com Express e código de ligação ao MongoDB Atlas. A ligação real depende das credenciais no .env. Registo de conta implementado; login e rotas de objetos/tarefas ainda pendentes.
+Servidor Node.js com Express e código de ligação ao MongoDB Atlas. A ligação real depende das credenciais no .env. Registo, login e sessões implementados; rotas de objetos/tarefas ainda pendentes.
 
 ## Requisitos
 
@@ -88,7 +88,7 @@ caracteres), `email` (normalizado para minúsculas, até 254 caracteres e único
 e selecionar os campos públicos. `buildUser` recebe um hash já calculado internamente;
 nunca deve receber diretamente o corpo inteiro de um pedido HTTP. A validação do
 MongoDB verifica o tipo do hash, não prova que foi produzido por um algoritmo seguro.
-O algoritmo e a validação da palavra-passe serão implementados na autenticação.
+O processamento e a validação da palavra-passe estão implementados no serviço de registo/autenticação.
 O perfil de criação normal é sempre user. Ainda não existe criação de administrador.
 
 Executa `npm.cmd run db:setup` para criar a coleção e o índice único. O comando pode
@@ -97,7 +97,7 @@ antigos, e o índice pode falhar se já existirem emails repetidos. Consulta os 
 antes de aplicar a bases já preenchidas. Esta etapa parte de uma coleção nova.
 
 Executa `npm.cmd test` para verificar normalização, validação, proteção do perfil
-e exclusão dos dados internos nas respostas. O modelo foi implementado antes das rotas; o registo está agora documentado na secção seguinte e o login continua pendente.
+e exclusão dos dados internos nas respostas. O modelo foi implementado antes das rotas; o registo está agora documentado na secção seguinte e o login está documentado na secção de sessões.
 
 ## Registo de conta — EDT 4.3.1 (parte do registo)
 
@@ -117,7 +117,7 @@ Só estes três campos são aceites. Não é permitido enviar role ou passwordHa
 
 Resposta HTTP 201: `{ "user": { "id": "...", "name": "Rafael", "email": "rafael@example.com",
 "role": "user", "createdAt": "...", "updatedAt": "..." } }`.
-O hash e a palavra-passe nunca aparecem na resposta. Ainda não há login ou token.
+O hash e a palavra-passe nunca aparecem na resposta. O registo não inicia sessão; o token é obtido através do login.
 
 Erros em JSON com campo `error`: 400 para dados/JSON inválidos; 409 para email já
 registado; 413 para corpo demasiado grande; 415 para tipo de conteúdo incorreto;
@@ -142,4 +142,66 @@ instância local; antes de publicar com várias instâncias/proxy, configurar um
 armazenamento partilhado e trust proxy de acordo com o alojamento. Usar HTTPS
 fora de localhost. Não registar corpos dos pedidos, palavras-passe ou hashes em logs.
 
+
+
+## Login e sessões — EDT 4.3.1
+
+### Entrar
+
+`POST /auth/login`, Content-Type application/json:
+
+```json
+{"email":"rafael@example.com","password":"Exemplo123!"}
+```
+
+HTTP 200 devolve `{ "token": "...", "tokenType": "Bearer", "expiresAt": "...",
+"user": { "id": "...", "name": "...", "email": "...", "role": "user",
+"createdAt": "...", "updatedAt": "..." } }`.
+
+Credenciais incorretas devolvem HTTP 401 e a mesma mensagem para email inexistente
+e palavra-passe errada. Tipos/campos inválidos devolvem 400, tipo de conteúdo errado
+415 e mais de 20 tentativas por IP em 15 minutos devolvem 429. O limite de hashes
+simultâneos é partilhado com o registo (503 quando está ocupado).
+
+A verificação recalcula o scrypt com o salt guardado e compara usando timingSafeEqual.
+Não tenta desencriptar o hash. Faz também um cálculo para emails inexistentes,
+reduzindo diferenças de tempo. O login preserva a palavra-passe exata e aceita até
+128 caracteres para contas anteriores à regra atual de criação; novas contas
+continuam limitadas a 6–20 caracteres sem espaços.
+
+### Usar a sessão
+
+Nas rotas protegidas, envia o cabeçalho `Authorization: Bearer TOKEN_RECEBIDO`.
+O token tem 32 bytes aleatórios, representados por 64 caracteres hexadecimais.
+Deve ser tratado como uma credencial: não o enviar em URLs ou logs.
+
+- `GET /auth/me`: HTTP 200 com `{ "user": { ... } }`, sem hash nem token.
+- `POST /auth/logout`: HTTP 204 sem corpo, elimina apenas a sessão usada no pedido.
+- Token ausente, malformado, desconhecido ou expirado: HTTP 401.
+
+Cada login cria uma sessão independente, válida 24 horas a partir da criação.
+Não existe renovação automática ou refresh token nesta versão. Logout numa sessão
+não termina as outras. A API consulta o utilizador atual a cada pedido autenticado.
+Permissões de administrador e acesso aos objetos serão implementados nas rotas próprias.
+
+A coleção técnica `sessions` guarda userId (ObjectId), tokenHash (SHA-256), createdAt
+e expiresAt. O token original nunca fica na BD. SHA-256 é adequado para este token
+aleatório; palavras-passe continuam a usar scrypt. `npm.cmd run db:setup` prepara
+esta coleção e os seus índices único e TTL, além de preparar users.
+O TTL limpa sessões expiradas em segundo plano; como essa limpeza não é imediata,
+a API verifica expiresAt antes de autorizar qualquer pedido.
+
+`src/services/authentication.js` trata login e sessões;
+`src/middleware/require-auth.js` verifica a sessão antes de uma rota protegida;
+`src/models/session.js` define a coleção técnica. Não foi adicionada dependência.
+
+`npm.cmd test` inclui agora verificação de palavra-passe, formato do token e dados
+do login. `npm.cmd run test:auth` testa o percurso HTTP/Atlas completo com uma conta
+aleatória @example.com, removendo apenas essa conta e as suas sessões no final.
+As verificações locais não substituem a configuração HTTPS e armazenamento seguro
+do token no dispositivo quando ligarmos o Flutter.
+
+Referências:
+- https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html
+- https://www.mongodb.com/docs/manual/core/index-ttl/
 

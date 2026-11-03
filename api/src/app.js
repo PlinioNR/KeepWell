@@ -44,7 +44,7 @@ app.use((error, _req, res, _next) => {
   }
 
   // Só estes códigos são usados pelos erros previstos de validação/registo.
-  if ([400, 409, 503].includes(error.status)) {
+  if ([400, 401, 409, 503].includes(error.status)) {
     return res.status(error.status).json({ error: error.message });
   }
 
@@ -54,4 +54,5 @@ app.use((error, _req, res, _next) => {
 
 
 export default app;
+
 
