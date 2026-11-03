@@ -38,7 +38,9 @@ ODS 12: meta 12.5 (principal, prevenção de resíduos), 12.2 (complementar). Im
 - `app/` — app Flutter (pacote `keepwell`, org `pt.esmad`, só Android).
   - `lib/theme/`: `app_colors.dart`, `app_spacing.dart` (espaços e raios), `app_theme.dart` (claro/escuro, fonte Nunito Sans via google_fonts). Valores tirados das variáveis do Figma em 02/11.
   - Modo escuro: cores propostas no código; ainda não existem variáveis de modo escuro no Figma.
-  - `lib/screens/`: um ficheiro por ecrã. Feito: `welcome_screen.dart` (01 Welcome; botões ainda sem navegação; usa a logo do Plinio em vez do ícone do Figma).
+  - `lib/screens/`: um ficheiro por ecrã. Feito: `welcome_screen.dart` (01 Welcome; usa a logo do Plinio em vez do ícone do Figma; ENTRAR abre o Sign In), `sign_in_screen.dart` (02 Sign In; StatefulWidget com Form e validação; ainda sem ligação à API; CRIAR CONTA sem navegação).
+  - `lib/widgets/`: widgets partilhados. `app_text_field.dart` = componente Forms/Text Field do Figma (rótulo por cima + TextFormField).
+  - Navegação simples com `Navigator.push`/`pop` (sem pacotes de rotas).
   - `assets/images/logo.png`: logo (PNG 429×390 tirado de uma captura; falta versão em maior resolução ou SVG exportada do Illustrator, original em Documents\PAM\logo 5.ai). No modo escuro é pintada de creme.
   - Ícones: pacote `lucide_icons_flutter` (mesma família Lucide do Figma).
   - Fundo dos ecrãs = branco (neutral/white), como no Figma.

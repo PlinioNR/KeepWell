@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import 'sign_in_screen.dart';
 
 /// Ecrã 01 Welcome: a primeira coisa que o utilizador vê.
 ///
@@ -52,8 +53,11 @@ class WelcomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
               FilledButton(
-                // O ecrã "Entrar" ainda não existe; a navegação vem a seguir.
-                onPressed: () {},
+                // Abre o ecrã Entrar por cima deste (a seta "voltar" regressa).
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SignInScreen()),
+                ),
                 child: const Text('ENTRAR'),
               ),
               const SizedBox(height: AppSpacing.md),
