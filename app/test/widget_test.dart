@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -34,5 +35,33 @@ void main() {
     await tester.tap(find.byTooltip('Voltar'));
     await tester.pumpAndSettle();
     expect(find.bySemanticsLabel('Logótipo KeepWell'), findsOneWidget);
+  });
+
+  testWidgets('Criar conta: valida campos, palavra-passe curta e termos',
+      (tester) async {
+    // Ecrã do tamanho do Figma (390 × 844), para caber o formulário todo.
+    tester.view.physicalSize = const Size(1170, 2532);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const KeepWellApp());
+    await tester.tap(find.text('CRIAR CONTA'));
+    await tester.pumpAndSettle();
+    expect(find.text('Crie a sua conta'), findsOneWidget);
+
+    // Palavra-passe com menos de 6 caracteres e termos por aceitar.
+    await tester.enterText(find.byType(TextFormField).at(2), '123');
+    await tester.tap(find.widgetWithText(FilledButton, 'CRIAR CONTA'));
+    await tester.pump();
+    expect(find.text('Escreva o seu nome.'), findsOneWidget);
+    expect(find.text('Use pelo menos 6 caracteres.'), findsOneWidget);
+    expect(find.text('Tem de aceitar os termos para criar conta.'),
+        findsOneWidget);
+
+    // Marcar a caixa faz desaparecer o erro dos termos.
+    await tester.tap(find.byType(Checkbox));
+    await tester.pump();
+    expect(find.text('Tem de aceitar os termos para criar conta.'),
+        findsNothing);
   });
 }

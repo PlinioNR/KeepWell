@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../theme/app_spacing.dart';
+import '../utils/validators.dart';
 import '../widgets/app_text_field.dart';
+import 'sign_up_screen.dart';
 
 /// Ecrã 02 Sign In: o utilizador entra com o email e a palavra-passe.
 ///
@@ -45,19 +47,6 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 
-  /// Verifica o email: não pode estar vazio e tem de ter "@".
-  String? _validateEmail(String? value) {
-    final email = value?.trim() ?? '';
-    if (email.isEmpty) return 'Escreva o seu email.';
-    if (!email.contains('@')) return 'O email não é válido.';
-    return null; // null = sem erro
-  }
-
-  /// Verifica a palavra-passe: não pode estar vazia.
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) return 'Escreva a palavra-passe.';
-    return null;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +88,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
-                      validator: _validateEmail,
+                      validator: validateEmail,
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     AppTextField(
@@ -108,7 +97,8 @@ class _SignInScreenState extends State<SignInScreen> {
                       controller: _passwordController,
                       obscureText: true,
                       textInputAction: TextInputAction.done,
-                      validator: _validatePassword,
+                      validator: (value) =>
+                          validateRequired(value, 'Escreva a palavra-passe.'),
                       onFieldSubmitted: (_) => _signIn(),
                     ),
                     const SizedBox(height: AppSpacing.lg),
@@ -133,8 +123,13 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                   ),
                   TextButton(
-                    // O ecrã "Criar conta" vem no próximo passo.
-                    onPressed: () {},
+                    // Troca este ecrã pelo Criar conta (não empilha ecrãs).
+                    onPressed: () => Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SignUpScreen(),
+                      ),
+                    ),
                     child: const Text('CRIAR CONTA'),
                   ),
                 ],
