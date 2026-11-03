@@ -1,6 +1,6 @@
 # KeepWell API
 
-Servidor Node.js com Express e código de ligação ao MongoDB Atlas. A ligação real depende das credenciais no .env. Ainda sem autenticação ou rotas de dados.
+Servidor Node.js com Express e código de ligação ao MongoDB Atlas. A ligação real depende das credenciais no .env. Registo de conta implementado; login e rotas de objetos/tarefas ainda pendentes.
 
 ## Requisitos
 
@@ -97,4 +97,49 @@ antigos, e o índice pode falhar se já existirem emails repetidos. Consulta os 
 antes de aplicar a bases já preenchidas. Esta etapa parte de uma coleção nova.
 
 Executa `npm.cmd test` para verificar normalização, validação, proteção do perfil
-e exclusão dos dados internos nas respostas. Ainda não há rotas de registo ou login.
+e exclusão dos dados internos nas respostas. O modelo foi implementado antes das rotas; o registo está agora documentado na secção seguinte e o login continua pendente.
+
+## Registo de conta — EDT 4.3.1 (parte do registo)
+
+`POST /auth/register` com `Content-Type: application/json`:
+
+```json
+{
+  "name": "Rafael",
+  "email": "rafael@example.com",
+  "password": "Exemplo123!"
+}
+```
+
+Nome: 2–100 caracteres. Email: formato básico válido, normalizado para minúsculas.
+Palavra-passe: 6–20 caracteres, sem espaços, tabulações ou quebras de linha. Esta regra foi definida pelo utilizador. Palavras-passe inválidas são rejeitadas, sem remoção silenciosa de caracteres.
+Só estes três campos são aceites. Não é permitido enviar role ou passwordHash.
+
+Resposta HTTP 201: `{ "user": { "id": "...", "name": "Rafael", "email": "rafael@example.com",
+"role": "user", "createdAt": "...", "updatedAt": "..." } }`.
+O hash e a palavra-passe nunca aparecem na resposta. Ainda não há login ou token.
+
+Erros em JSON com campo `error`: 400 para dados/JSON inválidos; 409 para email já
+registado; 413 para corpo demasiado grande; 415 para tipo de conteúdo incorreto;
+429 após 10 tentativas por IP em 15 minutos; 503 se já houver quatro hashes em curso;
+500 para falha interna. A resposta 409 permite deduzir a existência de um email.
+
+Hash: scrypt assíncrono do Node.js, N=32768, r=8, p=3, salt aleatório de 16 bytes e
+resultado de 64 bytes. Formato guardado: `scrypt$N$r$p$saltHex$hashHex`.
+Salt e parâmetros são públicos; o formato permite futura verificação no login.
+Referência: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
+
+Organização: `src/app.js` configura o Express; `src/server.js` liga à BD e arranca;
+`src/routes/auth.js` define HTTP e limite; `src/services/registration.js` valida e
+guarda; `src/security/password.js` processa a palavra-passe.
+
+`npm.cmd test` executa os testes sem ligação à BD. `npm.cmd run test:integration`
+usa o Atlas configurado no .env, cria uma conta com email aleatório @example.com,
+verifica o registo e remove apenas essa conta no fim. Não usa a porta 3000.
+
+O limite de pedidos fica na memória e reinicia com o processo. Serve para uma
+instância local; antes de publicar com várias instâncias/proxy, configurar um
+armazenamento partilhado e trust proxy de acordo com o alojamento. Usar HTTPS
+fora de localhost. Não registar corpos dos pedidos, palavras-passe ou hashes em logs.
+
+
