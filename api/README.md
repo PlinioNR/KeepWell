@@ -1,6 +1,6 @@
 # KeepWell API
 
-Servidor Node.js com Express e código de ligação ao MongoDB Atlas. A ligação real depende das credenciais no .env. Registo, login e sessões implementados; rotas de objetos/tarefas ainda pendentes.
+Servidor Node.js com Express e código de ligação ao MongoDB Atlas. A ligação real depende das credenciais no .env. Registo, login, sessões, categorias e criação/consulta de objetos implementados; edição/eliminação de objetos e tarefas ainda pendentes.
 
 ## Requisitos
 
@@ -211,7 +211,7 @@ Referências:
 São categorias dos objetos, partilhadas por todos os utilizadores. As dicas também
 serão associadas a categorias. A coleção `categories` tem `_id` (ObjectId), `name`,
 `createdAt` e `updatedAt`. Não tem userId, porque não pertence a uma pessoa específica.
-Objetos terão categoria e dono separados. Ainda não implementámos o modelo Objeto.
+Objetos têm categoria e dono separados. O modelo Objeto está documentado na secção de objetos pessoais.
 
 O nome é normalizado removendo espaços nas extremidades e reduzindo espaços repetidos.
 O limite 2–60 caracteres é uma decisão de implementação. O índice único usa collation
@@ -253,7 +253,7 @@ categoria inexistente; 409 para nome repetido ou categoria associada a objetos/d
 requireAuth; requireAdmin verifica-o antes da alteração. O cliente não escolhe o perfil.
 
 Decisão de eliminação: recusar categorias usadas. A verificação consulta categoryId
-como ObjectId em objects e tips. Estes modelos ainda serão implementados; quando
+como ObjectId em objects e tips. O modelo objects já está implementado; o modelo tips continua pendente. Quando
 forem adicionadas escritas concorrentes nesses recursos, coordenar criação/alteração
 de referências e eliminação de categoria para evitar uma corrida entre as operações.
 Não existe chave estrangeira automática no MongoDB.
@@ -277,4 +277,59 @@ src/middleware/require-admin.js. O CRUD está em services/categories.js e routes
 `npm.cmd run test:categories` executa o teste HTTP/Atlas com conta e categorias
 aleatórias, promove apenas essa conta temporária durante o teste e remove os dados
 criados no final. `npm.cmd test` inclui os testes locais de permissões e validação.
+
+
+## Objetos pessoais — EDT 4.2.3 e primeira parte de 4.4.1
+
+Campos da coleção objects: _id, name (2–100 caracteres, espaços normalizados),
+userId e categoryId (ObjectId), createdAt e updatedAt. Nome e categoria são obrigatórios.
+Não é exigido nome único: uma pessoa pode ter dois objetos com o mesmo nome.
+Fotografia, edição, eliminação, pesquisa e filtro por categoria entram em etapas seguintes.
+
+| Método e rota | Resultado |
+|---|---|
+| POST /objects | 201 com object e Location |
+| GET /objects | 200 com objects, page, pageSize e total |
+| GET /objects/:id | 200 com object |
+
+Todas exigem Bearer. POST recebe apenas `{"name":"Portátil pessoal","categoryId":"ID_DO_SELECT"}`.
+O categoryId tem de identificar uma categoria existente. O userId vem exclusivamente
+da sessão. Campos internos ou desconhecidos são rejeitados com 400.
+A resposta contém id, name, categoryId, createdAt e updatedAt. O Flutter pode obter o
+nome da categoria através da lista GET /categories.
+
+GET /objects aceita page e pageSize (inteiros positivos). Por defeito, page=1 e
+pageSize=20; máximo pageSize=100 e page=1000000. Ordena dos mais recentes para os mais
+antigos, com id como desempate. O total e a lista podem refletir instantes ligeiramente
+diferentes se houver criação simultânea. Outros parâmetros são rejeitados nesta etapa.
+
+Consulta individual e listagem filtram SEMPRE pelo userId da sessão, incluindo admins.
+Um objeto inexistente ou pertencente a outra pessoa devolve a mesma resposta 404.
+Id malformado: 400; sem sessão: 401; tipo de conteúdo errado no POST: 415.
+
+Preparação: npm.cmd run db:setup cria a coleção e índices por dono/data e categoria.
+Criação e eliminação de categorias usam transações: ambas escrevem na categoria, num
+contador interno opcional referenceVersion, para coordenar alterações concorrentes.
+Este campo não é uma contagem de objetos e não sai na API. Objetos e categoria são
+confirmados em conjunto, com repetição automática de conflitos pelo driver.
+Ao implementar dicas e alterações de categoria dos objetos, reutilizar este protocolo.
+Acesso direto à BD fora da API não é abrangido por estas regras.
+
+Ficheiros: src/models/object.js, src/services/objects.js e src/routes/objects.js.
+A função withDatabaseTransaction em database.js concentra a abertura/fecho da transação.
+Referência: https://www.mongodb.com/docs/drivers/node/current/crud/transactions/
+
+npm.cmd test inclui validação do modelo e paginação. npm.cmd run test:objects verifica
+HTTP/Atlas com duas contas temporárias, isolamento por dono, categorias e transações;
+apaga apenas os dados exclusivos desse teste no fim.
+
+### PowerShell e acentos
+
+Para enviar JSON com acentos de forma consistente, usa bytes UTF-8:
+
+```powershell
+$dados = @{ name = "Portátil pessoal"; categoryId = "ID_REAL_DA_CATEGORIA" } | ConvertTo-Json
+$corpoUtf8 = [System.Text.Encoding]::UTF8.GetBytes($dados)
+Invoke-RestMethod -Method Post -Uri "http://localhost:3000/objects" -Headers $cabecalhos -ContentType "application/json; charset=utf-8" -Body $corpoUtf8
+```
 

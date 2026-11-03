@@ -49,3 +49,12 @@ export async function closeDatabase() {
     await currentClient.close();
   }
 }
+
+// Agrupa operações que têm de ser confirmadas em conjunto (por exemplo categoria + objeto).
+export async function withDatabaseTransaction(work) {
+  if (!client || !database) throw new Error('A ligação ao MongoDB ainda não foi iniciada.');
+  return client.withSession(session => session.withTransaction(
+    () => work(database, session),
+    { readConcern: { level: 'snapshot' }, writeConcern: { w: 'majority' } }
+  ));
+}

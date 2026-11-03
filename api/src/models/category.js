@@ -26,6 +26,7 @@ export async function setupCategories(database) {
       required: ['name', 'createdAt', 'updatedAt'],
       properties: {
         _id: { bsonType: 'objectId' },
+        referenceVersion: { bsonType: ['int', 'long'], minimum: 0 },
         name: { bsonType: 'string', minLength: 2, maxLength: 60, pattern: '^\\S(?:[\\s\\S]*\\S)$' },
         createdAt: { bsonType: 'date' },
         updatedAt: { bsonType: 'date' }
@@ -44,3 +45,4 @@ export async function setupCategories(database) {
     collation: { locale: 'pt', strength: 2 }
   });
 }
+

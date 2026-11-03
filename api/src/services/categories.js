@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongodb';
-import { getDatabase } from '../database.js';
+import { getDatabase, withDatabaseTransaction } from '../database.js';
 import { buildCategory, toPublicCategory } from '../models/category.js';
 
 export function parseCategoryId(id) {
@@ -61,18 +61,19 @@ export async function updateCategory(id, body) {
 
 export async function deleteCategory(id) {
   const _id = parseCategoryId(id);
-  const database = getDatabase();
-  if (!await database.collection('categories').findOne({ _id }, { projection: { _id: 1 } })) {
-    throw Object.assign(new Error('Categoria não encontrada.'), { status: 404 });
-  }
-  // Convenção para os futuros modelos: categoryId será um ObjectId.
-  const [object, tip] = await Promise.all([
-    database.collection('objects').findOne({ categoryId: _id }, { projection: { _id: 1 } }),
-    database.collection('tips').findOne({ categoryId: _id }, { projection: { _id: 1 } })
-  ]);
-  if (object || tip) {
-    throw Object.assign(new Error('A categoria está associada a objetos ou dicas e não pode ser eliminada.'), { status: 409 });
-  }
-  const result = await database.collection('categories').deleteOne({ _id });
-  if (!result.deletedCount) throw Object.assign(new Error('Categoria não encontrada.'), { status: 404 });
+  return withDatabaseTransaction(async (database, session) => {
+    // Obtém uma escrita na mesma categoria usada pela criação de objetos.
+    const category = await database.collection('categories').findOneAndUpdate(
+      { _id }, { $inc: { referenceVersion: 1 } },
+      { session, returnDocument: 'after', projection: { _id: 1 } }
+    );
+    if (!category) throw Object.assign(new Error('Categoria não encontrada.'), { status: 404 });
+    // Operações da mesma transação são executadas em sequência.
+    const object = await database.collection('objects').findOne({ categoryId: _id }, { session, projection: { _id: 1 } });
+    const tip = await database.collection('tips').findOne({ categoryId: _id }, { session, projection: { _id: 1 } });
+    if (object || tip) {
+      throw Object.assign(new Error('A categoria está associada a objetos ou dicas e não pode ser eliminada.'), { status: 409 });
+    }
+    await database.collection('categories').deleteOne({ _id }, { session });
+  });
 }
