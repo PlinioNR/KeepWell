@@ -10,7 +10,9 @@
     "db:setup": "node --env-file=.env src/scripts/setup-database.js",
     "test": "node --test",
     "test:integration": "node --env-file=.env src/scripts/check-registration.js",
-    "test:auth": "node --env-file=.env src/scripts/check-authentication.js"
+    "test:auth": "node --env-file=.env src/scripts/check-authentication.js",
+    "admin:promote": "node --env-file=.env src/scripts/promote-admin.js",
+    "test:categories": "node --env-file=.env src/scripts/check-category-admin.js"
   },
   "engines": {
     "node": ">=24"

@@ -89,7 +89,7 @@ e selecionar os campos públicos. `buildUser` recebe um hash já calculado inter
 nunca deve receber diretamente o corpo inteiro de um pedido HTTP. A validação do
 MongoDB verifica o tipo do hash, não prova que foi produzido por um algoritmo seguro.
 O processamento e a validação da palavra-passe estão implementados no serviço de registo/autenticação.
-O perfil de criação normal é sempre user. Ainda não existe criação de administrador.
+O perfil de criação normal é sempre user. O perfil admin pode ser atribuído pelo comando local documentado na secção de administração.
 
 Executa `npm.cmd run db:setup` para criar a coleção e o índice único. O comando pode
 ser repetido; não apaga dados. Ao atualizar uma coleção existente, não corrige documentos
@@ -204,4 +204,77 @@ do token no dispositivo quando ligarmos o Flutter.
 Referências:
 - https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html
 - https://www.mongodb.com/docs/manual/core/index-ttl/
+
+
+## Categorias — EDT 4.2.2 e consulta de 4.4.4
+
+São categorias dos objetos, partilhadas por todos os utilizadores. As dicas também
+serão associadas a categorias. A coleção `categories` tem `_id` (ObjectId), `name`,
+`createdAt` e `updatedAt`. Não tem userId, porque não pertence a uma pessoa específica.
+Objetos terão categoria e dono separados. Ainda não implementámos o modelo Objeto.
+
+O nome é normalizado removendo espaços nas extremidades e reduzindo espaços repetidos.
+O limite 2–60 caracteres é uma decisão de implementação. O índice único usa collation
+portuguesa com strength 2: ignora maiúsculas/minúsculas e distingue acentos.
+`npm.cmd run db:setup` prepara a coleção, sem inserir categorias oficiais.
+
+`GET /categories` exige `Authorization: Bearer TOKEN`. Devolve HTTP 200:
+
+```json
+{"categories":[]}
+```
+
+Com dados, cada elemento tem id (string), name, createdAt e updatedAt. A lista vem
+ordenada por nome segundo a collation portuguesa. Sem sessão válida, devolve 401.
+As rotas POST, PATCH e DELETE para categorias estão agora implementadas
+com proteção de administrador. A lista oficial de categorias ainda está por definir.
+Os nomes usados na explicação e nos testes não são dados iniciais aprovados.
+
+Modelo em `src/models/category.js`, consulta em `src/services/categories.js` e rota
+em `src/routes/categories.js`. `npm.cmd test` inclui validação e normalização do modelo.
+
+## Administração de categorias — EDT 4.3.2 e 4.4.4
+
+| Método e rota | Perfil | Resposta de sucesso |
+|---|---|---|
+| GET /categories | user ou admin | 200, categories |
+| GET /categories/:id | user ou admin | 200, category |
+| POST /categories | admin | 201, category e Location |
+| PATCH /categories/:id | admin | 200, category |
+| DELETE /categories/:id | admin | 204 sem corpo |
+
+POST e PATCH recebem apenas `{"name":"Eletrónica"}` com Content-Type application/json.
+O PATCH preserva id e createdAt. Nome normalizado de 2–60 caracteres, único sem
+distinguir maiúsculas/minúsculas. Não há categorias iniciais inseridas automaticamente.
+
+Erros: 400 para id/dados inválidos; 401 sem sessão; 403 sem perfil admin; 404 para
+categoria inexistente; 409 para nome repetido ou categoria associada a objetos/dicas;
+415 para tipo de conteúdo errado. O perfil é consultado na BD a cada pedido, pelo
+requireAuth; requireAdmin verifica-o antes da alteração. O cliente não escolhe o perfil.
+
+Decisão de eliminação: recusar categorias usadas. A verificação consulta categoryId
+como ObjectId em objects e tips. Estes modelos ainda serão implementados; quando
+forem adicionadas escritas concorrentes nesses recursos, coordenar criação/alteração
+de referências e eliminação de categoria para evitar uma corrida entre as operações.
+Não existe chave estrangeira automática no MongoDB.
+
+### Preparar a primeira conta admin
+
+Cria primeiro uma conta pelo registo. Depois, no terminal local da pasta api, executa:
+
+```powershell
+npm.cmd run admin:promote -- email-da-conta
+```
+
+Este comando altera explicitamente o perfil dessa conta para admin. Não existe uma
+rota HTTP pública de promoção. Quem possui acesso às credenciais locais da BD pode
+executá-lo. Nenhuma conta real é promovida automaticamente. Podes confirmar o perfil
+através de GET /auth/me; não é necessário voltar a entrar, pois a API consulta o perfil atual.
+
+O script está em src/scripts/promote-admin.js; o middleware em
+src/middleware/require-admin.js. O CRUD está em services/categories.js e routes/categories.js.
+
+`npm.cmd run test:categories` executa o teste HTTP/Atlas com conta e categorias
+aleatórias, promove apenas essa conta temporária durante o teste e remove os dados
+criados no final. `npm.cmd test` inclui os testes locais de permissões e validação.
 
