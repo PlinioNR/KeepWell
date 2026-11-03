@@ -1,0 +1,10 @@
+# Dependências instaladas pelo npm; são recuperadas com npm install.
+node_modules/
+
+# Configuração local e segredos. Apenas o modelo pode entrar no Git.
+.env
+.env.*
+!.env.example
+
+# Ficheiros de diagnóstico locais.
+*.log

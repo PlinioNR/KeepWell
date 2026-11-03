@@ -1,0 +1,20 @@
+{
+  "name": "keepwell-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "API REST do KeepWell.",
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=.env src/server.js",
+    "dev": "node --env-file=.env --watch src/server.js",
+    "db:setup": "node --env-file=.env src/scripts/setup-database.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "express": "^5.3.0",
+    "mongodb": "^7.8.0"
+  }
+}
