@@ -29,6 +29,9 @@ abstract final class AppTheme {
         // No Figma o fundo dos ecrãs é neutral/white.
         scaffold: AppColors.white,
         outlinedButtonFill: AppColors.secondary100,
+        inputFill: AppColors.secondary100,
+        // Os ícones Lucide no Figma estão ligados a Secondary/900.
+        iconColor: AppColors.secondary900,
       );
 
   // O modo escuro ainda não existe no Figma: estas cores são uma proposta
@@ -49,13 +52,24 @@ abstract final class AppTheme {
         ),
         scaffold: AppColors.primary800,
         outlinedButtonFill: Colors.transparent,
+        inputFill: AppColors.primary700,
+        iconColor: AppColors.secondary100,
       );
 
   static ThemeData _build(
     ColorScheme colors, {
     required Color scaffold,
     required Color outlinedButtonFill,
+    required Color inputFill,
+    required Color iconColor,
   }) {
+    // Borda dos campos de texto: igual em todos os estados, só muda a cor.
+    OutlineInputBorder inputBorder(Color color, [double width = 1]) =>
+        OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: BorderSide(color: color, width: width),
+        );
+
     final textTheme = _textTheme(colors.onSurface);
 
     return ThemeData(
@@ -67,7 +81,10 @@ abstract final class AppTheme {
         foregroundColor: colors.onSurface,
         centerTitle: true,
         elevation: 0,
+        // Evita que a barra mude de cor quando o conteúdo passa por baixo.
+        scrolledUnderElevation: 0,
         titleTextStyle: textTheme.titleLarge,
+        iconTheme: IconThemeData(color: iconColor),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -90,25 +107,31 @@ abstract final class AppTheme {
           ),
         ),
       ),
+      // Botão Ghost do Figma: só texto, sem fundo nem borda.
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(0, 48),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          foregroundColor: colors.primary,
+          textStyle: textTheme.labelLarge,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+        ),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: colors.surface,
+        fillColor: inputFill,
         contentPadding: const EdgeInsets.all(AppSpacing.md),
         hintStyle: textTheme.bodyMedium?.copyWith(
           color: colors.onSurfaceVariant,
         ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide(color: colors.outline),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide(color: colors.outline),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide(color: colors.primary, width: 2),
-        ),
+        errorStyle: textTheme.bodySmall?.copyWith(color: colors.error),
+        border: inputBorder(colors.outline),
+        enabledBorder: inputBorder(colors.outline),
+        focusedBorder: inputBorder(colors.primary, 2),
+        errorBorder: inputBorder(colors.error),
+        focusedErrorBorder: inputBorder(colors.error, 2),
       ),
     );
   }
