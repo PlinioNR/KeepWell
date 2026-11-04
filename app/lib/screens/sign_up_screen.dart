@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../services/api_exception.dart';
+import '../services/auth_service.dart';
 import '../theme/app_spacing.dart';
 import '../utils/validators.dart';
 import '../widgets/app_text_field.dart';
@@ -29,6 +31,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
   // Se devemos mostrar o erro dos termos (só depois de tentar criar a conta).
   bool _showTermsError = false;
 
+  // Se estamos à espera da resposta da API (o botão mostra um "a carregar").
+  bool _isLoading = false;
+
+  // Serviço que faz os pedidos de conta à API.
+  final _authService = AuthService();
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -38,7 +46,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   /// Corre quando se carrega em "Criar conta".
-  void _signUp() {
+  ///
+  /// É "async" porque tem de esperar ("await") pela resposta da API.
+  Future<void> _signUp() async {
     final fieldsAreValid = _formKey.currentState!.validate();
 
     // setState avisa o Flutter de que algo mudou e o ecrã tem de ser
@@ -47,10 +57,34 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     if (!fieldsAreValid || !_acceptedTerms) return;
 
-    // A ligação à API ainda não existe.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Dados válidos. Falta ligar à API.')),
-    );
+    setState(() => _isLoading = true);
+
+    try {
+      await _authService.register(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      // Depois de um "await", o ecrã pode já ter sido fechado.
+      // "mounted" confirma que ainda está aberto antes de o usarmos.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Conta criada. Já pode entrar.')),
+      );
+      // Leva a pessoa para o ecrã Entrar.
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const SignInScreen()),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      // Mostra a mensagem da API (ex.: "Já existe uma conta com este email.").
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+      setState(() => _isLoading = false);
+    }
   }
 
   /// Marca ou desmarca a caixa dos termos.
@@ -129,8 +163,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     FilledButton(
-                      onPressed: _signUp,
-                      child: const Text('CRIAR CONTA'),
+                      // Enquanto espera pela API, o botão fica desativado
+                      // (null) para não se criar a conta duas vezes.
+                      onPressed: _isLoading ? null : _signUp,
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('CRIAR CONTA'),
                     ),
                   ],
                 ),

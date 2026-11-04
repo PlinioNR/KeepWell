@@ -14,6 +14,7 @@ Disciplinas: Gestão de Projetos (GP), Usabilidade e UX, Prototipagem em Apl. M�
 - Código limpo, simples e fácil de entender para iniciantes: nomes claros, ficheiros pequenos, sem arquiteturas avançadas (nada de BLoC/Riverpod; `setState` e classes simples chegam). Bem documentado: comentários em português a explicar o propósito de cada classe e de cada parte menos óbvia.
 - Sempre que se escreve código novo, explicar passo a passo ao Plinio (o que cada parte faz e porquê), para ele perceber e conseguir explicar o código na apresentação.
 - Nunca assumir que algo foi implementado, aprovado ou entregue só porque foi planeado. Distinguir concluído de planeado.
+- Commits: o Plinio faz os commits e pushes à mão. Não fazer commit nem push; no fim de cada tarefa, sugerir só o título e (se necessário) a descrição do commit.
 
 ## Conceito
 App para registar objetos pessoais e gerir a sua manutenção (foco principal); dicas de conservação como apoio.
@@ -40,6 +41,8 @@ ODS 12: meta 12.5 (principal, prevenção de resíduos), 12.2 (complementar). Im
   - Modo escuro: cores propostas no código; ainda não existem variáveis de modo escuro no Figma.
   - `lib/screens/`: um ficheiro por ecrã. Feito: `welcome_screen.dart` (01 Welcome; usa a logo do Plinio em vez do ícone do Figma; ENTRAR abre o Sign In), `sign_in_screen.dart` (02 Sign In) e `sign_up_screen.dart` (03 Sign Up, com caixa dos termos via setState). Ambos StatefulWidget com Form e validação, ainda sem ligação à API; trocam entre si com `pushReplacement`.
   - `lib/utils/validators.dart`: validações partilhadas (obrigatório, email, palavra-passe nova). Regra da palavra-passe decidida a 03/11: 6–20 caracteres, sem espaços, igual na app e na API.
+  - `lib/services/`: ligação à API com o pacote `http`. `api_config.dart` (endereço: `http://10.0.2.2:3000` no emulador), `api_exception.dart` (erro com mensagem em PT), `auth_service.dart` (`register` feito a 04/11; recebe `http.Client` opcional para testes com MockClient). O Criar conta já chama a API; o Entrar ainda não.
+  - AndroidManifest: `usesCleartextTraffic="true"` para permitir http local (retirar se a API passar a https).
   - `lib/widgets/`: widgets partilhados. `app_text_field.dart` = componente Forms/Text Field do Figma (rótulo por cima + TextFormField).
   - Navegação simples com `Navigator.push`/`pop` (sem pacotes de rotas).
   - `assets/images/logo.png`: logo (PNG 429×390 tirado de uma captura; falta versão em maior resolução ou SVG exportada do Illustrator, original em Documents\PAM\logo 5.ai). No modo escuro é pintada de creme.
