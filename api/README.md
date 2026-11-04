@@ -1,6 +1,6 @@
 # KeepWell API
 
-Servidor Node.js com Express e código de ligação ao MongoDB Atlas. A ligação real depende das credenciais no .env. Registo, login, sessões, categorias e criação/consulta de objetos implementados; edição/eliminação de objetos e tarefas ainda pendentes.
+Servidor Node.js com Express e código de ligação ao MongoDB Atlas. A ligação real depende das credenciais no .env. Registo, login, sessões, categorias e criação/consulta de objetos implementados; CRUD, pesquisa e filtro de objetos implementados; fotografia e tarefas ainda pendentes.
 
 ## Requisitos
 
@@ -284,7 +284,7 @@ criados no final. `npm.cmd test` inclui os testes locais de permissões e valida
 Campos da coleção objects: _id, name (2–100 caracteres, espaços normalizados),
 userId e categoryId (ObjectId), createdAt e updatedAt. Nome e categoria são obrigatórios.
 Não é exigido nome único: uma pessoa pode ter dois objetos com o mesmo nome.
-Fotografia, edição, eliminação, pesquisa e filtro por categoria entram em etapas seguintes.
+Edição e eliminação estão implementadas na secção seguinte. Pesquisa e filtro já estão implementados na secção respetiva. A fotografia continua pendente.
 
 | Método e rota | Resultado |
 |---|---|
@@ -301,7 +301,7 @@ nome da categoria através da lista GET /categories.
 GET /objects aceita page e pageSize (inteiros positivos). Por defeito, page=1 e
 pageSize=20; máximo pageSize=100 e page=1000000. Ordena dos mais recentes para os mais
 antigos, com id como desempate. O total e a lista podem refletir instantes ligeiramente
-diferentes se houver criação simultânea. Outros parâmetros são rejeitados nesta etapa.
+diferentes se houver criação simultânea. Também são aceites search e categoryId, documentados na secção de pesquisa e filtro.
 
 Consulta individual e listagem filtram SEMPRE pelo userId da sessão, incluindo admins.
 Um objeto inexistente ou pertencente a outra pessoa devolve a mesma resposta 404.
@@ -333,3 +333,110 @@ $corpoUtf8 = [System.Text.Encoding]::UTF8.GetBytes($dados)
 Invoke-RestMethod -Method Post -Uri "http://localhost:3000/objects" -Headers $cabecalhos -ContentType "application/json; charset=utf-8" -Body $corpoUtf8
 ```
 
+
+## Editar e eliminar objetos — continuação da EDT 4.4.1
+
+PATCH /objects/:id exige sessão e recebe name e/ou categoryId, com pelo menos um
+campo. Rejeita campos internos, incluindo userId, datas e referenceVersion.
+Preserva id, dono e createdAt. Devolve HTTP 200 com object. Ao mudar de categoria,
+confirma a existência da nova e usa a transação coordenada com deleteCategory.
+
+DELETE /objects/:id exige sessão e devolve 204 sem corpo. Só o dono pode eliminar.
+A regra proposta de preservação do histórico é bloquear a eliminação quando existe
+qualquer tarefa em tasks com objectId igual ao objeto, incluindo tarefas concluídas.
+Devolve 409 sem alterar o objeto. O modelo de tarefas ainda não foi implementado.
+
+Nos dois métodos: 400 para id/dados inválidos; 404 para objeto inexistente ou alheio;
+401 sem sessão; no PATCH, 415 para tipo de conteúdo incorreto. Admins também só
+podem alterar os seus próprios objetos nestas rotas.
+
+O objeto admite referenceVersion como campo técnico opcional, oculto na API.
+A eliminação escreve nesse campo dentro da transação antes de consultar tarefas.
+Quando implementarmos a criação de tarefas, esta terá de escrever no mesmo objeto
+na sua transação para coordenar a concorrência. A eliminação não faz cascata.
+
+npm.cmd run test:objects cobre agora edição parcial, mudança de categoria, preservação
+de createdAt, bloqueio por tarefa, eliminação e proibição de alterações por outra conta.
+O teste insere uma referência temporária em tasks e remove-a; isso não implementa
+nem aprova o modelo de tarefas. A coleção poderá aparecer vazia no Atlas após o teste.
+Pesquisa e filtro por categoria estão implementados. A fotografia continua pendente.
+
+
+## Pesquisa e filtro de objetos — conclusão desta parte da EDT 4.4.1
+
+GET /objects aceita agora search e categoryId além de page e pageSize.
+
+- search: texto de até 100 caracteres, espaços normalizados; procura parte do nome,
+  ignorando maiúsculas/minúsculas e distinguindo acentos. Texto vazio ignora a pesquisa.
+- categoryId: ObjectId com 24 caracteres hexadecimais; vazio significa todas as categorias.
+  Um id bem formado que não corresponde a nenhum objeto devolve lista vazia.
+- Ambos podem ser combinados. O total conta os resultados filtrados antes da paginação.
+- Parâmetros repetidos, tipos/formatos inválidos ou campos desconhecidos devolvem 400.
+- O filtro obrigatório userId vem da sessão e aplica-se à consulta e ao total.
+
+Exemplos: /objects?search=port, /objects?categoryId=ID_REAL e
+/objects?search=port&categoryId=ID_REAL&page=1&pageSize=20.
+O texto é escapado antes da expressão regular MongoDB: símbolos como +, . e * são
+literais, não operadores. Não se aceitam filtros MongoDB fornecidos pelo cliente.
+Pesquisa por substring não usa um índice de texto; a escala atual permite manter a
+implementação simples. O índice de dono limita o conjunto relevante para cada pessoa.
+
+No PowerShell, codifica o texto para URL:
+
+```powershell
+$pesquisa = [Uri]::EscapeDataString("port")
+Invoke-RestMethod -Uri "http://localhost:3000/objects?search=$pesquisa" -Headers $cabecalhos | ConvertTo-Json -Depth 5
+```
+
+O teste de integração de objetos cobre pesquisa, símbolos literais, categoria,
+combinação, paginação, resultados vazios, parâmetros inválidos e isolamento entre contas.
+A fotografia continua pendente.
+
+
+## Ajustes aos ecrãs do Figma (Screens, revistos a 03/11/2026)
+
+### Categoria
+
+POST /categories aceita name (obrigatório), icon e description.
+icon usa o catálogo inicial package, plug, armchair, bike, shirt, wrench, laptop, car.
+São chaves para mapear a componentes Lucide no Flutter, não SVG nem código executável.
+GET /categories/icons exige sessão e devolve {icons:[...]}, para preencher o select.
+O catálogo inicial é uma decisão de implementação; o protótipo não especifica as opções.
+
+description é texto opcional, até 500 caracteres. Para limpar, enviar string vazia.
+icon por defeito é package e description por defeito é string vazia. A leitura de
+documentos antigos devolve esses valores sem exigir migração ou apagar categorias.
+Os campos novos são opcionais na validação MongoDB para preservar dados anteriores.
+
+PATCH /categories/:id aceita um ou mais dos três campos, preservando os omitidos,
+o id e createdAt. Campos adicionais, valores inválidos e pedido vazio devolvem 400.
+O perfil admin continua obrigatório para criar, editar e eliminar.
+
+GET /categories?search=texto pesquisa parte do nome, sem distinguir maiúsculas e
+minúsculas, distinguindo acentos e tratando símbolos literalmente. Até 60 caracteres;
+parâmetros desconhecidos/repetidos ou tipos inválidos devolvem 400. Vazio lista tudo.
+
+A listagem para admin acrescenta objectCount por categoria: quantidade GLOBAL de
+objetos nessa categoria, de todos os utilizadores. Esta é a interpretação implementada
+para a contagem no ecrã administrativo, não um acesso aos documentos dos objetos.
+A contagem é calculada por agregação, não guardada no documento nem baseada em
+referenceVersion. Utilizadores comuns não recebem objectCount. Seleção do perfil
+usa apenas a sessão, nunca parâmetros do cliente.
+
+### Data de aquisição do objeto
+
+POST e PATCH /objects aceitam acquiredOn opcional. Formato de transporte: AAAA-MM-DD,
+por exemplo 2023-07-03. A aplicação apresenta dd/mm/aaaa. É uma data sem hora, guardada
+como string para evitar alterações por fuso horário, com validação de calendário na API.
+Datas como 2025-02-29 são rejeitadas com 400. Não há restrição adicional por data futura.
+Campo omitido no POST e objetos antigos são apresentados com acquiredOn:null.
+No PATCH, omitir preserva o valor; null limpa-o. As datas createdAt/updatedAt são
+instantes de registo/alteração e não substituem a data de aquisição.
+
+Exemplo de objeto: {"name":"Portátil","categoryId":"ID_REAL","acquiredOn":"2023-07-03"}.
+Exemplo de categoria: {"name":"Eletrónica","icon":"laptop","description":"Equipamento eletrónico"}.
+Usar bytes UTF-8 e Content-Type application/json; charset=utf-8 no PowerShell.
+
+Ainda pendentes do design: fotografia; descrição do objeto (aparece no detalhe mas
+não no formulário, precisa de decisão); próximo cuidado e histórico (dependem de tarefas).
+Não foi alterado o design no Figma ou a interface Flutter nesta etapa.

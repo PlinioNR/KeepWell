@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { categoryIcons } from '../models/category.js';
 import { requireAuth } from '../middleware/require-auth.js';
 import { requireAdmin } from '../middleware/require-admin.js';
 import { listCategories, getCategory, createCategory, updateCategory, deleteCategory } from '../services/categories.js';
@@ -12,9 +13,11 @@ function requireJson(req, res, next) {
   next();
 }
 
-router.get('/', async (_req, res) => {
-  res.status(200).json({ categories: await listCategories() });
+router.get('/', async (req, res) => {
+  res.status(200).json({ categories: await listCategories(req.query, req.auth.user.role === 'admin') });
 });
+// Antes de /:id para icons não ser interpretado como identificador.
+router.get('/icons', (_req, res) => res.status(200).json({ icons: categoryIcons }));
 router.get('/:id', async (req, res) => {
   res.status(200).json({ category: await getCategory(req.params.id) });
 });
@@ -32,3 +35,4 @@ router.delete('/:id', requireAdmin, async (req, res) => {
 });
 
 export default router;
+

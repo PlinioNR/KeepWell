@@ -9,12 +9,12 @@ export function parseCategoryId(id) {
   return new ObjectId(id);
 }
 
-export function validateCategoryInput(body) {
+export function validateCategoryInput(body, current) {
   if (!body || typeof body !== 'object' || Array.isArray(body) ||
-      Object.keys(body).some(key => key !== 'name')) {
-    throw Object.assign(new Error('Envia apenas o campo name.'), { status: 400 });
+      Object.keys(body).some(key => !['name', 'icon', 'description'].includes(key)) || !Object.keys(body).length) {
+    throw Object.assign(new Error('Envia name, icon e/ou description, sem campos adicionais.'), { status: 400 });
   }
-  try { return buildCategory(body); }
+  try { return buildCategory(current ? { name: current.name, icon: current.icon ?? 'package', description: current.description ?? '', ...body } : body); }
   catch (error) { throw Object.assign(new Error(error.message), { status: 400 }); }
 }
 
@@ -25,12 +25,30 @@ function duplicateError(error) {
   return error;
 }
 
-export async function listCategories() {
-  const categories = await getDatabase().collection('categories')
-    .find({}).collation({ locale: 'pt', strength: 2 }).sort({ name: 1 }).toArray();
-  return categories.map(toPublicCategory);
+export function parseCategorySearch(query = {}) {
+  if (Object.keys(query).some(key => key !== 'search') ||
+      (query.search !== undefined && typeof query.search !== 'string')) {
+    throw Object.assign(new Error('Usa apenas search com um texto único.'), { status: 400 });
+  }
+  const search = (query.search ?? '').trim().replace(/\s+/gu, ' ');
+  if ([...search].length > 60) throw Object.assign(new Error('A pesquisa deve ter até 60 caracteres.'), { status: 400 });
+  return search ? { name: { $regex: search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } } : {};
 }
 
+export async function listCategories(query = {}, isAdmin = false) {
+  const database = getDatabase();
+  const categories = await database.collection('categories')
+    .find(parseCategorySearch(query)).collation({ locale: 'pt', strength: 2 }).sort({ name: 1 }).toArray();
+  const result = categories.map(toPublicCategory);
+  if (!isAdmin || !categories.length) return result;
+  // Só o administrador recebe contagens globais, calculadas a partir dos objetos.
+  const counts = await database.collection('objects').aggregate([
+    { $match: { categoryId: { $in: categories.map(category => category._id) } } },
+    { $group: { _id: '$categoryId', count: { $sum: 1 } } }
+  ]).toArray();
+  const byId = new Map(counts.map(item => [item._id.toString(), item.count]));
+  return result.map(category => ({ ...category, objectCount: byId.get(category.id) ?? 0 }));
+}
 export async function getCategory(id) {
   const category = await getDatabase().collection('categories').findOne({ _id: parseCategoryId(id) });
   if (!category) throw Object.assign(new Error('Categoria não encontrada.'), { status: 404 });
@@ -47,18 +65,20 @@ export async function createCategory(body) {
 
 export async function updateCategory(id, body) {
   const _id = parseCategoryId(id);
-  const category = validateCategoryInput(body);
+  const collection = getDatabase().collection('categories');
+  const current = await collection.findOne({ _id });
+  if (!current) throw Object.assign(new Error('Categoria não encontrada.'), { status: 404 });
+  const category = validateCategoryInput(body, current);
+  const changes = { updatedAt: category.updatedAt };
+  for (const key of ['name', 'icon', 'description']) {
+    if (Object.hasOwn(body, key)) changes[key] = category[key];
+  }
   try {
-    // Altera apenas nome e data de alteração; preserva id e createdAt.
-    const updated = await getDatabase().collection('categories').findOneAndUpdate(
-      { _id }, { $set: { name: category.name, updatedAt: category.updatedAt } },
-      { returnDocument: 'after' }
-    );
+    const updated = await collection.findOneAndUpdate({ _id }, { $set: changes }, { returnDocument: 'after' });
     if (!updated) throw Object.assign(new Error('Categoria não encontrada.'), { status: 404 });
     return toPublicCategory(updated);
   } catch (error) { throw duplicateError(error); }
 }
-
 export async function deleteCategory(id) {
   const _id = parseCategoryId(id);
   return withDatabaseTransaction(async (database, session) => {
@@ -77,3 +97,4 @@ export async function deleteCategory(id) {
     await database.collection('categories').deleteOne({ _id }, { session });
   });
 }
+

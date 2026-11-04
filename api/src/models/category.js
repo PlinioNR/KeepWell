@@ -1,19 +1,30 @@
+// Catálogo inicial: o Flutter associa cada chave ao respetivo ícone Lucide.
+export const categoryIcons = ['package', 'plug', 'armchair', 'bike', 'shirt', 'wrench', 'laptop', 'car'];
+
 // Categoria partilhada pelos objetos e, futuramente, pelas dicas.
-export function buildCategory({ name } = {}) {
+export function buildCategory({ name, icon = 'package', description = '' } = {}) {
   if (typeof name !== 'string') throw new Error('Indica o nome da categoria.');
   // Remove espaços nas extremidades e reduz espaços repetidos a um só.
   const normalizedName = name.trim().replace(/\s+/gu, ' ');
   if ([...normalizedName].length < 2 || [...normalizedName].length > 60) {
     throw new Error('O nome da categoria deve ter entre 2 e 60 caracteres.');
   }
+  if (typeof icon !== 'string' || !categoryIcons.includes(icon)) {
+    throw new Error('Seleciona um ícone válido do catálogo.');
+  }
+  if (typeof description !== 'string' || [...description.trim()].length > 500) {
+    throw new Error('A descrição deve ser texto com até 500 caracteres.');
+  }
   const now = new Date();
-  return { name: normalizedName, createdAt: now, updatedAt: now };
+  return { name: normalizedName, icon, description: description.trim(), createdAt: now, updatedAt: now };
 }
 
 export function toPublicCategory(category) {
   return {
     id: category._id.toString(), 
     name: category.name,
+    icon: category.icon ?? 'package',
+    description: category.description ?? '',
     createdAt: category.createdAt, 
     updatedAt: category.updatedAt
   };
@@ -27,6 +38,8 @@ export async function setupCategories(database) {
       properties: {
         _id: { bsonType: 'objectId' },
         referenceVersion: { bsonType: ['int', 'long'], minimum: 0 },
+        icon: { enum: categoryIcons },
+        description: { bsonType: 'string', maxLength: 500 },
         name: { bsonType: 'string', minLength: 2, maxLength: 60, pattern: '^\\S(?:[\\s\\S]*\\S)$' },
         createdAt: { bsonType: 'date' },
         updatedAt: { bsonType: 'date' }
@@ -45,4 +58,5 @@ export async function setupCategories(database) {
     collation: { locale: 'pt', strength: 2 }
   });
 }
+
 

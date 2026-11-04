@@ -5,6 +5,7 @@ import app from '../app.js';
 import { connectDatabase, closeDatabase } from '../database.js';
 import { registerUser } from '../services/registration.js';
 import { loginUser } from '../services/authentication.js';
+import { createObject, deleteObject } from '../services/objects.js';
 
 const marker = randomUUID();
 const email = `category-admin-test-${marker}@example.com`;
@@ -34,11 +35,43 @@ try {
   assert.equal((await request('POST', '', { name, role: 'admin' })).status, 400);
   assert.equal((await request('PATCH', '/invalido', { name })).status, 400);
   assert.equal((await request('GET', `/${new ObjectId()}`)).status, 404);
-  let response = await request('POST', '', { name });
+  let response = await request('POST', '', { name, icon: 'laptop', description: 'Equipamento pessoal' });
   assert.equal(response.status, 201);
   const created = (await response.json()).category;
-  categoryIds.push(new ObjectId(created.id));
   assert.equal(response.headers.get('location'), `/categories/${created.id}`);
+  categoryIds.push(new ObjectId(created.id));
+  assert.equal(created.icon, 'laptop');
+  assert.equal(created.description, 'Equipamento pessoal');
+  response = await request('GET', '/icons');
+  assert.equal(response.status, 200);
+  assert.ok((await response.json()).icons.includes('laptop'));
+  assert.equal((await request('PATCH', `/${created.id}`, { icon: 'nao-existe' })).status, 400);
+  response = await request('PATCH', `/${created.id}`, { icon: 'bike' });
+  assert.equal(response.status, 200);
+  let partial = (await response.json()).category;
+  assert.equal(partial.name, name);
+  assert.equal(partial.description, 'Equipamento pessoal');
+  assert.equal(partial.icon, 'bike');
+  const testObject = await createObject({ name: 'Objeto da contagem', categoryId: created.id }, userId);
+  response = await request('GET', `?search=${encodeURIComponent(name.toLowerCase())}`);
+  assert.equal(response.status, 200);
+  let categories = (await response.json()).categories;
+  assert.equal(categories.length, 1);
+  assert.equal(categories[0].objectCount, 1);
+  await database.collection('users').updateOne({ _id: userId, email }, { $set: { role: 'user' } });
+  response = await request('GET', `?search=${encodeURIComponent(name)}`);
+  categories = (await response.json()).categories;
+  assert.equal(categories.length, 1);
+  assert.ok(!('objectCount' in categories[0]));
+  await database.collection('users').updateOne({ _id: userId, email }, { $set: { role: 'admin' } });
+  await deleteObject(testObject.id, userId);
+  response = await request('GET', `?search=${encodeURIComponent(name)}`);
+  assert.equal((await response.json()).categories[0].objectCount, 0);
+  for (const query of ['?search=a&search=b', '?search=' + 'x'.repeat(61), '?objectCount=true']) {
+    assert.equal((await request('GET', query)).status, 400);
+  }
+  response = await request('PATCH', `/${created.id}`, { description: '' });
+  assert.equal((await response.json()).category.description, '');
   assert.equal((await request('POST', '', { name: name.toLowerCase() })).status, 409);
   response = await request('GET', `/${created.id}`);
   assert.equal(response.status, 200);
@@ -58,6 +91,7 @@ try {
   console.log('CRUD verificado no Atlas: consulta, criação, edição, eliminação, duplicados, dados inválidos e permissões atuais.');
 } finally {
   if (database) {
+    if (userId) await database.collection('objects').deleteMany({ userId });
     // Só ids devolvidos pela criação neste teste podem ser eliminados aqui.
     if (categoryIds.length) await database.collection('categories').deleteMany({ _id: { $in: categoryIds } });
     // Em caso de resposta perdida, encontra apenas os nomes exclusivos deste teste.
@@ -73,3 +107,5 @@ try {
   if (server) await new Promise(resolve => server.close(resolve));
   await closeDatabase();
 }
+
+

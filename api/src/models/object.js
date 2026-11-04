@@ -7,10 +7,22 @@ export function parseObjectId(id) {
   return new ObjectId(id);
 }
 
+// Data de calendário sem hora: evita mudar de dia por causa do fuso horário.
+export function validateAcquiredOn(value) {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw Object.assign(new Error('A data de aquisição deve usar AAAA-MM-DD ou null.'), { status: 400 });
+  }
+  const date = new Date(`${value}T00:00:00.000Z`);
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
+    throw Object.assign(new Error('A data de aquisição não existe no calendário.'), { status: 400 });
+  }
+  return value;
+}
 export function buildObject(body, userId) {
   if (!body || typeof body !== 'object' || Array.isArray(body) ||
-      Object.keys(body).some(key => !['name', 'categoryId'].includes(key))) {
-    throw Object.assign(new Error('Envia apenas name e categoryId.'), { status: 400 });
+      Object.keys(body).some(key => !['name', 'categoryId', 'acquiredOn'].includes(key))) {
+    throw Object.assign(new Error('Envia apenas name, categoryId e acquiredOn.'), { status: 400 });
   }
   if (typeof body.name !== 'string') {
     throw Object.assign(new Error('Indica o nome do objeto.'), { status: 400 });
@@ -25,12 +37,12 @@ export function buildObject(body, userId) {
   // O dono vem da sessão, nunca de body.userId.
   if (!(userId instanceof ObjectId)) throw new Error('Utilizador autenticado inválido.');
   const now = new Date();
-  return { name, userId, categoryId: new ObjectId(body.categoryId), createdAt: now, updatedAt: now };
+  return { name, userId, categoryId: new ObjectId(body.categoryId), acquiredOn: validateAcquiredOn(body.acquiredOn), createdAt: now, updatedAt: now };
 }
 
 export function toPublicObject(object) {
   return {
-    id: object._id.toString(), name: object.name, categoryId: object.categoryId.toString(),
+    id: object._id.toString(), name: object.name, categoryId: object.categoryId.toString(), acquiredOn: object.acquiredOn ?? null,
     createdAt: object.createdAt, updatedAt: object.updatedAt
   };
 }
@@ -42,7 +54,9 @@ export async function setupObjects(database) {
       required: ['name', 'userId', 'categoryId', 'createdAt', 'updatedAt'],
       properties: {
         _id: { bsonType: 'objectId' },
+        referenceVersion: { bsonType: ['int', 'long'], minimum: 0 },
         name: { bsonType: 'string', minLength: 2, maxLength: 100, pattern: '^\\S(?:[\\s\\S]*\\S)$' },
+        acquiredOn: { bsonType: ['string', 'null'], pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
         userId: { bsonType: 'objectId' }, categoryId: { bsonType: 'objectId' },
         createdAt: { bsonType: 'date' }, updatedAt: { bsonType: 'date' }
       }
@@ -57,3 +71,5 @@ export async function setupObjects(database) {
   await database.collection('objects').createIndex({ userId: 1, createdAt: -1, _id: -1 }, { name: 'objects_owner_date' });
   await database.collection('objects').createIndex({ categoryId: 1 }, { name: 'objects_category' });
 }
+
+

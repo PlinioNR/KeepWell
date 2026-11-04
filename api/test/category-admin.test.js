@@ -24,3 +24,20 @@ test('rejeita ids malformados e campos internos enviados pelo cliente', () => {
   }
   assert.equal(validateCategoryInput({ name: '  Casa  ' }).name, 'Casa');
 });
+
+test('a pesquisa de categorias é literal e rejeita filtros injetados', async () => {
+  const { parseCategorySearch } = await import('../src/services/categories.js');
+  assert.deepEqual(parseCategorySearch({ search: '  ' }), {});
+  const filter = parseCategorySearch({ search: 'Casa (A+B).' });
+  const regex = new RegExp(filter.name.$regex, filter.name.$options);
+  assert.ok(regex.test('Casa (A+B).'));
+  assert.ok(!regex.test('Casa AAABx'));
+  for (const query of [{ search: ['a','b'] }, { search: { $ne: null } }, { search: 'x'.repeat(61) }, { objectCount: 'true' }]) {
+    assert.throws(() => parseCategorySearch(query), { status: 400 });
+  }
+  const current = { name: 'Casa', icon: 'wrench', description: 'Existente' };
+  const validated = validateCategoryInput({ description: '' }, current);
+  assert.equal(validated.name, current.name);
+  assert.equal(validated.icon, current.icon);
+  assert.equal(validated.description, '');
+});

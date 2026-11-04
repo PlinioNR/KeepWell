@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/require-auth.js';
-import { createObject, listObjects, getObject } from '../services/objects.js';
+import { createObject, listObjects, getObject, updateObject, deleteObject } from '../services/objects.js';
 
 const router = Router();
 router.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
@@ -16,4 +16,14 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   res.status(200).json({ object: await getObject(req.params.id, req.auth.user._id) });
 });
+router.patch('/:id', async (req, res) => {
+  if (!req.is('application/json')) return res.status(415).json({ error: 'Usa Content-Type: application/json.' });
+  const object = await updateObject(req.params.id, req.body, req.auth.user._id);
+  res.status(200).json({ object });
+});
+router.delete('/:id', async (req, res) => {
+  await deleteObject(req.params.id, req.auth.user._id);
+  res.status(204).end();
+});
 export default router;
+

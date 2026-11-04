@@ -25,3 +25,18 @@ test('seleciona apenas os campos permitidos no documento e na resposta', () => {
   assert.equal(result.id, id.toString());
   assert.ok(!('internal' in result));
 });
+
+test('valida ícone e descrição, mantendo valores por defeito para categorias antigas', () => {
+  const defaults = buildCategory({ name: 'Casa' });
+  assert.equal(defaults.icon, 'package');
+  assert.equal(defaults.description, '');
+  const category = buildCategory({ name: 'Computadores', icon: 'laptop', description: '  Equipamento pessoal  ' });
+  assert.equal(category.description, 'Equipamento pessoal');
+  assert.equal(category.icon, 'laptop');
+  const legacy = toPublicCategory({ _id: new ObjectId(), name: 'Antiga' });
+  assert.equal(legacy.icon, 'package');
+  assert.equal(legacy.description, '');
+  for (const extra of [{ icon: 'inexistente' }, { icon: null }, { description: null }, { description: 'x'.repeat(501) }]) {
+    assert.throws(() => buildCategory({ name: 'Casa', ...extra }));
+  }
+});
