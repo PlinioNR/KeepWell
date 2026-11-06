@@ -3,10 +3,12 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../models/user.dart';
 import 'api_config.dart';
 import 'api_exception.dart';
+import 'session.dart';
 
-/// Faz os pedidos de conta à API (criar conta; mais tarde entrar e sair).
+/// Faz os pedidos de conta à API (criar conta e entrar; mais tarde sair).
 ///
 /// Os ecrãs não falam diretamente com a API: chamam este serviço.
 /// Assim, o código HTTP fica todo num sítio e os ecrãs ficam simples.
@@ -28,19 +30,52 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    final http.Response response;
+    final response = await _postJson('/auth/register', {
+      'name': name,
+      'email': email,
+      'password': password,
+    });
 
+    // 201 = "Created": a conta foi criada.
+    if (response.statusCode == 201) return;
+
+    throw ApiException(_errorMessage(response));
+  }
+
+  /// Entra na conta: POST /auth/login.
+  ///
+  /// Se correr bem, guarda o token e o utilizador na [Session].
+  /// Se correr mal (ex.: palavra-passe errada), lança uma [ApiException].
+  Future<void> login({
+    required String email,
+    required String password,
+  }) async {
+    final response = await _postJson('/auth/login', {
+      'email': email,
+      'password': password,
+    });
+
+    if (response.statusCode != 200) {
+      throw ApiException(_errorMessage(response));
+    }
+
+    // A API responde: {"token": "...", "user": {...}, ...}
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    Session.token = body['token'] as String;
+    Session.user = User.fromJson(body['user'] as Map<String, dynamic>);
+  }
+
+  /// Envia um pedido POST com [data] em JSON e devolve a resposta.
+  ///
+  /// Trata aqui os problemas de rede, que são iguais em todos os pedidos.
+  Future<http.Response> _postJson(String path, Map<String, String> data) async {
     try {
-      response = await _client
+      return await _client
           .post(
-            Uri.parse('$apiBaseUrl/auth/register'),
+            Uri.parse('$apiBaseUrl$path'),
             headers: {'Content-Type': 'application/json'},
             // jsonEncode transforma o mapa do Dart em texto JSON.
-            body: jsonEncode({
-              'name': name,
-              'email': email,
-              'password': password,
-            }),
+            body: jsonEncode(data),
           )
           .timeout(_timeout);
     } on TimeoutException {
@@ -51,11 +86,6 @@ class AuthService {
       throw const ApiException(
           'Não foi possível ligar ao servidor. Verifique a ligação.');
     }
-
-    // 201 = "Created": a conta foi criada.
-    if (response.statusCode == 201) return;
-
-    throw ApiException(_errorMessage(response));
   }
 
   /// Lê a mensagem de erro que a API envia em {"error": "..."}.

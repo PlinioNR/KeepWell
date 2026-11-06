@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../services/api_exception.dart';
+import '../services/auth_service.dart';
 import '../theme/app_spacing.dart';
 import '../utils/validators.dart';
 import '../widgets/app_text_field.dart';
+import 'home_screen.dart';
 import 'sign_up_screen.dart';
 
 /// Ecrã 02 Sign In: o utilizador entra com o email e a palavra-passe.
@@ -26,6 +29,12 @@ class _SignInScreenState extends State<SignInScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  // Se estamos à espera da resposta da API (o botão mostra um "a carregar").
+  bool _isLoading = false;
+
+  // Serviço que faz os pedidos de conta à API.
+  final _authService = AuthService();
+
   // Quando o ecrã fecha, libertamos os controladores da memória.
   @override
   void dispose() {
@@ -35,16 +44,39 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   /// Corre quando se carrega em "Entrar".
-  void _signIn() {
+  ///
+  /// É "async" porque tem de esperar ("await") pela resposta da API.
+  Future<void> _signIn() async {
     // validate() corre o validator de cada campo e mostra os erros.
     final isValid = _formKey.currentState!.validate();
     if (!isValid) return;
 
-    // A ligação à API ainda não existe. Por agora só confirmamos que
-    // o formulário está válido.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Dados válidos. Falta ligar à API.')),
-    );
+    setState(() => _isLoading = true);
+
+    try {
+      // Se correr bem, o AuthService guarda o token na Session.
+      await _authService.login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      // Depois de um "await", o ecrã pode já ter sido fechado.
+      if (!mounted) return;
+      // Abre a Home e apaga os ecrãs anteriores (Welcome e Entrar),
+      // para a seta "voltar" não regressar ao login.
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        (route) => false,
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      // Ex.: "Email ou palavra-passe incorretos."
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+      setState(() => _isLoading = false);
+    }
   }
 
 
@@ -103,8 +135,15 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     FilledButton(
-                      onPressed: _signIn,
-                      child: const Text('ENTRAR'),
+                      // Desativado (null) enquanto espera pela API.
+                      onPressed: _isLoading ? null : _signIn,
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('ENTRAR'),
                     ),
                   ],
                 ),

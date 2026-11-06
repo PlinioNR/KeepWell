@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:keepwell/services/api_exception.dart';
 import 'package:keepwell/services/auth_service.dart';
+import 'package:keepwell/services/session.dart';
 
 /// Testes do AuthService com uma API "a fingir" (MockClient):
 /// não é preciso ter a API ligada nem Internet.
@@ -55,5 +56,52 @@ void main() {
       throwsA(isA<ApiException>().having((e) => e.message, 'message',
           'Não foi possível ligar ao servidor. Verifique a ligação.')),
     );
+  });
+
+  test('login: guarda o token e o utilizador na Session', () async {
+    Session.clear();
+    final service = AuthService(
+      client: MockClient((request) async {
+        expect(request.url.path, '/auth/login');
+        return http.Response(
+          jsonEncode({
+            'token': 'abc',
+            'tokenType': 'Bearer',
+            'user': {
+              'id': '1',
+              'name': 'Ana',
+              'email': 'ana@mail.pt',
+              'role': 'user',
+            },
+          }),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      }),
+    );
+
+    await service.login(email: 'ana@mail.pt', password: 'abc123');
+
+    expect(Session.token, 'abc');
+    expect(Session.user?.name, 'Ana');
+    expect(Session.user?.isAdmin, false);
+  });
+
+  test('login: palavra-passe errada mostra a mensagem da API', () async {
+    Session.clear();
+    final service = AuthService(
+      client: MockClient((_) async => http.Response(
+            jsonEncode({'error': 'Email ou palavra-passe incorretos.'}),
+            401,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          )),
+    );
+
+    await expectLater(
+      service.login(email: 'ana@mail.pt', password: 'errada'),
+      throwsA(isA<ApiException>().having(
+          (e) => e.message, 'message', 'Email ou palavra-passe incorretos.')),
+    );
+    expect(Session.isLoggedIn, false);
   });
 }
