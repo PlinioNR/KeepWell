@@ -5,8 +5,8 @@ import '../theme/app_spacing.dart';
 
 /// Ecrã 05 Home — VERSÃO PROVISÓRIA.
 ///
-/// Por agora só confirma que o login funcionou, mostrando o nome de quem
-/// entrou. Vai ser substituído pelo ecrã Home do Figma no próximo passo.
+/// Por agora só mostra o nome de quem entrou. Vai ser substituído pelo
+/// ecrã Home do Figma (próximos cuidados e os meus objetos).
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -17,7 +17,10 @@ class HomeScreen extends StatelessWidget {
     final name = Session.user?.name ?? '';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Início')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text('Início'),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Text('Olá, $name', style: text.headlineMedium),

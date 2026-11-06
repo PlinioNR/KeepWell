@@ -104,10 +104,10 @@ Legenda: ✅ concluído · ◐ iniciado · sem marca = planeado.
   - 5.2.1 Ecrã de boas-vindas ✅
   - 5.2.2 Entrar ✅ (ligado à API; testado no emulador a 06/11)
   - 5.2.3 Criar conta ✅ (ligado à API; testado no emulador a 06/11)
-  - 5.2.4 Terminar sessão
+  - 5.2.4 Terminar sessão ✅ (ligado à API, testado a 06/11; botão provisório na Home, passa para o Settings)
 - 5.3 Objetos
   - 5.3.1 Início
-  - 5.3.2 Lista com pesquisa e filtro por categoria
+  - 5.3.2 Lista com pesquisa e filtro por categoria ◐ (lista e barra de separadores feitas; falta pesquisa e filtro)
   - 5.3.3 Adicionar e editar objeto com fotografia (câmara)
   - 5.3.4 Detalhe e eliminação do objeto
   - 5.3.5 Histórico do objeto

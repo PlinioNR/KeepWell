@@ -19,7 +19,11 @@ void main() {
       }),
     );
 
-    await service.register(name: 'Ana', email: 'ana@mail.pt', password: 'abc123');
+    await service.register(
+      name: 'Ana',
+      email: 'ana@mail.pt',
+      password: 'abc123',
+    );
 
     expect(sentRequest.method, 'POST');
     expect(sentRequest.url.path, '/auth/register');
@@ -32,17 +36,28 @@ void main() {
 
   test('register: mostra a mensagem de erro que a API envia', () async {
     final service = AuthService(
-      client: MockClient((_) async => http.Response(
-            jsonEncode({'error': 'Já existe uma conta com este email.'}),
-            409,
-            headers: {'content-type': 'application/json; charset=utf-8'},
-          )),
+      client: MockClient(
+        (_) async => http.Response(
+          jsonEncode({'error': 'Já existe uma conta com este email.'}),
+          409,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        ),
+      ),
     );
 
     expect(
-      () => service.register(name: 'Ana', email: 'ana@mail.pt', password: 'abc123'),
-      throwsA(isA<ApiException>().having(
-          (e) => e.message, 'message', 'Já existe uma conta com este email.')),
+      () => service.register(
+        name: 'Ana',
+        email: 'ana@mail.pt',
+        password: 'abc123',
+      ),
+      throwsA(
+        isA<ApiException>().having(
+          (e) => e.message,
+          'message',
+          'Já existe uma conta com este email.',
+        ),
+      ),
     );
   });
 
@@ -52,9 +67,18 @@ void main() {
     );
 
     expect(
-      () => service.register(name: 'Ana', email: 'ana@mail.pt', password: 'abc123'),
-      throwsA(isA<ApiException>().having((e) => e.message, 'message',
-          'Não foi possível ligar ao servidor. Verifique a ligação.')),
+      () => service.register(
+        name: 'Ana',
+        email: 'ana@mail.pt',
+        password: 'abc123',
+      ),
+      throwsA(
+        isA<ApiException>().having(
+          (e) => e.message,
+          'message',
+          'Não foi possível ligar ao servidor. Verifique a ligação.',
+        ),
+      ),
     );
   });
 
@@ -90,18 +114,53 @@ void main() {
   test('login: palavra-passe errada mostra a mensagem da API', () async {
     Session.clear();
     final service = AuthService(
-      client: MockClient((_) async => http.Response(
-            jsonEncode({'error': 'Email ou palavra-passe incorretos.'}),
-            401,
-            headers: {'content-type': 'application/json; charset=utf-8'},
-          )),
+      client: MockClient(
+        (_) async => http.Response(
+          jsonEncode({'error': 'Email ou palavra-passe incorretos.'}),
+          401,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        ),
+      ),
     );
 
     await expectLater(
       service.login(email: 'ana@mail.pt', password: 'errada'),
-      throwsA(isA<ApiException>().having(
-          (e) => e.message, 'message', 'Email ou palavra-passe incorretos.')),
+      throwsA(
+        isA<ApiException>().having(
+          (e) => e.message,
+          'message',
+          'Email ou palavra-passe incorretos.',
+        ),
+      ),
     );
+    expect(Session.isLoggedIn, false);
+  });
+
+  test('logout: envia o token à API e apaga a Session', () async {
+    Session.token = 'abc';
+    late http.Request sentRequest;
+    final service = AuthService(
+      client: MockClient((request) async {
+        sentRequest = request;
+        return http.Response('', 204);
+      }),
+    );
+
+    await service.logout();
+
+    expect(sentRequest.url.path, '/auth/logout');
+    expect(sentRequest.headers['Authorization'], 'Bearer abc');
+    expect(Session.isLoggedIn, false);
+  });
+
+  test('logout: sem ligação, a app sai na mesma', () async {
+    Session.token = 'abc';
+    final service = AuthService(
+      client: MockClient((_) async => throw http.ClientException('offline')),
+    );
+
+    await service.logout();
+
     expect(Session.isLoggedIn, false);
   });
 }

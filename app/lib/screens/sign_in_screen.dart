@@ -6,7 +6,7 @@ import '../services/auth_service.dart';
 import '../theme/app_spacing.dart';
 import '../utils/validators.dart';
 import '../widgets/app_text_field.dart';
-import 'home_screen.dart';
+import 'main_screen.dart';
 import 'sign_up_screen.dart';
 
 /// Ecrã 02 Sign In: o utilizador entra com o email e a palavra-passe.
@@ -62,23 +62,21 @@ class _SignInScreenState extends State<SignInScreen> {
 
       // Depois de um "await", o ecrã pode já ter sido fechado.
       if (!mounted) return;
-      // Abre a Home e apaga os ecrãs anteriores (Welcome e Entrar),
+      // Abre o ecrã principal e apaga os ecrãs anteriores (Welcome e Entrar),
       // para a seta "voltar" não regressar ao login.
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(builder: (context) => const MainScreen()),
         (route) => false,
       );
     } on ApiException catch (error) {
       if (!mounted) return;
       // Ex.: "Email ou palavra-passe incorretos."
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.message)));
       setState(() => _isLoading = false);
     }
   }
-
 
   @override
   Widget build(BuildContext context) {

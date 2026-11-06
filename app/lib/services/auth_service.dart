@@ -8,7 +8,7 @@ import 'api_config.dart';
 import 'api_exception.dart';
 import 'session.dart';
 
-/// Faz os pedidos de conta à API (criar conta e entrar; mais tarde sair).
+/// Faz os pedidos de conta à API: criar conta, entrar e sair.
 ///
 /// Os ecrãs não falam diretamente com a API: chamam este serviço.
 /// Assim, o código HTTP fica todo num sítio e os ecrãs ficam simples.
@@ -46,10 +46,7 @@ class AuthService {
   ///
   /// Se correr bem, guarda o token e o utilizador na [Session].
   /// Se correr mal (ex.: palavra-passe errada), lança uma [ApiException].
-  Future<void> login({
-    required String email,
-    required String password,
-  }) async {
+  Future<void> login({required String email, required String password}) async {
     final response = await _postJson('/auth/login', {
       'email': email,
       'password': password,
@@ -63,6 +60,29 @@ class AuthService {
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     Session.token = body['token'] as String;
     Session.user = User.fromJson(body['user'] as Map<String, dynamic>);
+  }
+
+  /// Sai da conta: POST /auth/logout.
+  ///
+  /// Primeiro apaga a sessão na app, por isso sair funciona sempre.
+  /// Depois pede à API para apagar a sessão do lado dela. Se esse pedido
+  /// falhar (ex.: sem rede), não faz mal: o token expira sozinho em 24 h.
+  Future<void> logout() async {
+    final token = Session.token;
+    Session.clear();
+    if (token == null) return;
+
+    try {
+      await _client
+          .post(
+            Uri.parse('$apiBaseUrl/auth/logout'),
+            // O token vai neste cabeçalho para a API saber que sessão apagar.
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(_timeout);
+    } catch (_) {
+      // Ignoramos o erro de propósito (ver explicação acima).
+    }
   }
 
   /// Envia um pedido POST com [data] em JSON e devolve a resposta.
@@ -80,11 +100,13 @@ class AuthService {
           .timeout(_timeout);
     } on TimeoutException {
       throw const ApiException(
-          'O servidor está a demorar a responder. Tente novamente.');
+        'O servidor está a demorar a responder. Tente novamente.',
+      );
     } on http.ClientException {
       // Sem rede, API desligada ou endereço errado.
       throw const ApiException(
-          'Não foi possível ligar ao servidor. Verifique a ligação.');
+        'Não foi possível ligar ao servidor. Verifique a ligação.',
+      );
     }
   }
 

@@ -80,9 +80,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
     } on ApiException catch (error) {
       if (!mounted) return;
       // Mostra a mensagem da API (ex.: "Já existe uma conta com este email.").
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.message)));
       setState(() => _isLoading = false);
     }
   }
