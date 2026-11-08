@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:keepwell/main.dart';
+import 'package:keepwell/theme/app_theme.dart';
+import 'package:keepwell/widgets/object_card.dart';
 
 void main() {
   // Nos testes não há Internet para descarregar a fonte.
@@ -16,8 +18,9 @@ void main() {
     expect(find.text('CRIAR CONTA'), findsOneWidget);
   });
 
-  testWidgets('Entrar: abre a partir do Welcome e valida os campos vazios',
-      (tester) async {
+  testWidgets('Entrar: abre a partir do Welcome e valida os campos vazios', (
+    tester,
+  ) async {
     await tester.pumpWidget(const KeepWellApp());
 
     // Toca em ENTRAR no Welcome e espera pela animação de transição.
@@ -37,8 +40,9 @@ void main() {
     expect(find.bySemanticsLabel('Logótipo KeepWell'), findsOneWidget);
   });
 
-  testWidgets('Criar conta: valida campos, palavra-passe curta e termos',
-      (tester) async {
+  testWidgets('Criar conta: valida campos, palavra-passe curta e termos', (
+    tester,
+  ) async {
     // Ecrã do tamanho do Figma (390 × 844), para caber o formulário todo.
     tester.view.physicalSize = const Size(1170, 2532);
     tester.view.devicePixelRatio = 3;
@@ -55,13 +59,31 @@ void main() {
     await tester.pump();
     expect(find.text('Escreva o seu nome.'), findsOneWidget);
     expect(find.text('Use pelo menos 6 caracteres.'), findsOneWidget);
-    expect(find.text('Tem de aceitar os termos para criar conta.'),
-        findsOneWidget);
+    expect(
+      find.text('Tem de aceitar os termos para criar conta.'),
+      findsOneWidget,
+    );
 
     // Marcar a caixa faz desaparecer o erro dos termos.
     await tester.tap(find.byType(Checkbox));
     await tester.pump();
-    expect(find.text('Tem de aceitar os termos para criar conta.'),
-        findsNothing);
+    expect(
+      find.text('Tem de aceitar os termos para criar conta.'),
+      findsNothing,
+    );
+  });
+
+  testWidgets('Cartão de objeto mostra nome e categoria', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: const Scaffold(
+          body: ObjectCard(name: 'Bicicleta urbana', category: 'Veículos'),
+        ),
+      ),
+    );
+
+    expect(find.text('Bicicleta urbana'), findsOneWidget);
+    expect(find.text('Veículos'), findsOneWidget);
   });
 }

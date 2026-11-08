@@ -1,7 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Internet: para a fonte Nunito Sans e, mais tarde, para a API. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- usesCleartextTraffic: permite pedidos "http://" (sem S) à API local
+         durante o desenvolvimento. Com a API publicada em https, retirar. -->
     <application
+        android:usesCleartextTraffic="true"
         android:label="keepwell"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">

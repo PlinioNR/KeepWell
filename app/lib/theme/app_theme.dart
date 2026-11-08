@@ -13,48 +13,57 @@ import 'app_spacing.dart';
 /// Tab Label → labelSmall.
 abstract final class AppTheme {
   static ThemeData get light => _build(
-        const ColorScheme(
-          brightness: Brightness.light,
-          primary: AppColors.primary500,
-          onPrimary: AppColors.secondary100,
-          secondary: AppColors.accent500,
-          onSecondary: AppColors.primary500,
-          error: AppColors.danger600,
-          onError: AppColors.white,
-          surface: AppColors.white,
-          onSurface: AppColors.primary500,
-          onSurfaceVariant: AppColors.primary400,
-          outline: AppColors.primary200,
-        ),
-        // No Figma o fundo dos ecrãs é neutral/white.
-        scaffold: AppColors.white,
-        outlinedButtonFill: AppColors.secondary100,
-        inputFill: AppColors.secondary100,
-        // Os ícones Lucide no Figma estão ligados a Secondary/900.
-        iconColor: AppColors.secondary900,
-      );
+    const ColorScheme(
+      brightness: Brightness.light,
+      primary: AppColors.primary500,
+      onPrimary: AppColors.secondary100,
+      secondary: AppColors.accent500,
+      onSecondary: AppColors.primary500,
+      error: AppColors.danger600,
+      onError: AppColors.white,
+      surface: AppColors.white,
+      onSurface: AppColors.primary500,
+      onSurfaceVariant: AppColors.primary400,
+      outline: AppColors.primary200,
+      // Fundo do quadrado da foto nos cartões de objeto.
+      surfaceContainerHighest: AppColors.primary100,
+    ),
+    // No Figma o fundo dos ecrãs é neutral/white.
+    scaffold: AppColors.white,
+    outlinedButtonFill: AppColors.secondary100,
+    inputFill: AppColors.secondary100,
+    // Os ícones Lucide no Figma estão ligados a Secondary/900.
+    iconColor: AppColors.secondary900,
+    cardBorder: AppColors.primary300,
+    inactiveTab: AppColors.primary300,
+    tabBarBorder: AppColors.secondary200,
+  );
 
   // O modo escuro ainda não existe no Figma: estas cores são uma proposta
   // e devem ser acertadas quando forem criadas as variáveis do modo escuro.
   static ThemeData get dark => _build(
-        const ColorScheme(
-          brightness: Brightness.dark,
-          primary: AppColors.secondary500,
-          onPrimary: AppColors.primary500,
-          secondary: AppColors.accent400,
-          onSecondary: AppColors.primary900,
-          error: AppColors.danger400,
-          onError: AppColors.primary900,
-          surface: AppColors.primary700,
-          onSurface: AppColors.secondary100,
-          onSurfaceVariant: AppColors.primary200,
-          outline: AppColors.primary400,
-        ),
-        scaffold: AppColors.primary800,
-        outlinedButtonFill: Colors.transparent,
-        inputFill: AppColors.primary700,
-        iconColor: AppColors.secondary100,
-      );
+    const ColorScheme(
+      brightness: Brightness.dark,
+      primary: AppColors.secondary500,
+      onPrimary: AppColors.primary500,
+      secondary: AppColors.accent400,
+      onSecondary: AppColors.primary900,
+      error: AppColors.danger400,
+      onError: AppColors.primary900,
+      surface: AppColors.primary700,
+      onSurface: AppColors.secondary100,
+      onSurfaceVariant: AppColors.primary200,
+      outline: AppColors.primary400,
+      surfaceContainerHighest: AppColors.primary600,
+    ),
+    scaffold: AppColors.primary800,
+    outlinedButtonFill: Colors.transparent,
+    inputFill: AppColors.primary700,
+    iconColor: AppColors.secondary100,
+    cardBorder: AppColors.primary400,
+    inactiveTab: AppColors.primary300,
+    tabBarBorder: AppColors.primary700,
+  );
 
   static ThemeData _build(
     ColorScheme colors, {
@@ -62,6 +71,9 @@ abstract final class AppTheme {
     required Color outlinedButtonFill,
     required Color inputFill,
     required Color iconColor,
+    required Color cardBorder,
+    required Color inactiveTab,
+    required Color tabBarBorder,
   }) {
     // Borda dos campos de texto: igual em todos os estados, só muda a cor.
     OutlineInputBorder inputBorder(Color color, [double width = 1]) =>
@@ -127,10 +139,50 @@ abstract final class AppTheme {
         side: const BorderSide(color: AppColors.primary300, width: 1.5),
         // Marcada: fundo azul. Desmarcada: fundo igual ao dos campos.
         fillColor: WidgetStateProperty.resolveWith(
-          (states) =>
-              states.contains(WidgetState.selected) ? colors.primary : inputFill,
+          (states) => states.contains(WidgetState.selected)
+              ? colors.primary
+              : inputFill,
         ),
         checkColor: WidgetStatePropertyAll(colors.onPrimary),
+      ),
+      // Object Card do Figma: fundo creme, borda fina e cantos 16.
+      cardTheme: CardThemeData(
+        color: inputFill,
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        // Corta o efeito de toque para não sair dos cantos arredondados.
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          side: BorderSide(color: cardBorder),
+        ),
+      ),
+      // Tab Bar do Figma: sem "pílula" de fundo; o separador ativo fica
+      // azul-marinho e os inativos cinza azulado.
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: scaffold,
+        indicatorColor: Colors.transparent,
+        height: 64,
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            color: states.contains(WidgetState.selected)
+                ? colors.primary
+                : inactiveTab,
+          ),
+        ),
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => textTheme.labelSmall?.copyWith(
+            color: states.contains(WidgetState.selected)
+                ? colors.primary
+                : inactiveTab,
+          ),
+        ),
+      ),
+      // Traço superior da Tab Bar (usado no ecrã principal).
+      dividerTheme: DividerThemeData(
+        color: tabBarBorder,
+        thickness: 1,
+        space: 1,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -150,15 +202,18 @@ abstract final class AppTheme {
   }
 
   static TextTheme _textTheme(Color color) {
-    TextStyle style(double size, FontWeight weight, double lineHeight,
-            [double letterSpacing = 0]) =>
-        GoogleFonts.nunitoSans(
-          fontSize: size,
-          fontWeight: weight,
-          height: lineHeight / size,
-          letterSpacing: letterSpacing,
-          color: color,
-        );
+    TextStyle style(
+      double size,
+      FontWeight weight,
+      double lineHeight, [
+      double letterSpacing = 0,
+    ]) => GoogleFonts.nunitoSans(
+      fontSize: size,
+      fontWeight: weight,
+      height: lineHeight / size,
+      letterSpacing: letterSpacing,
+      color: color,
+    );
 
     return TextTheme(
       headlineLarge: style(32, FontWeight.w700, 40),
