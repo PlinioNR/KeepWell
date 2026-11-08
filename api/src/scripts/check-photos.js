@@ -1,3 +1,4 @@
+import { buildTask } from '../models/task.js';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { ObjectId } from 'mongodb';
@@ -88,7 +89,7 @@ try {
   const finalKey = (await database.collection('objects').findOne({ _id })).photoKey;
   assert.ok((await readPhotoFile(finalKey)).length > 0);
   for (const key of keys) if (key !== finalKey) await assert.rejects(readPhotoFile(key), { status: 404 });
-  const task = await database.collection('tasks').insertOne({ objectId: _id, userId: userIds[0] });
+  const task = await database.collection('tasks').insertOne(buildTask({ objectId: object.id, title: 'Cuidado temporário', dueOn: '2026-11-08' }, userIds[0]));
   try {
     assert.equal((await fetch(base, { method: 'DELETE', headers: headers(0) })).status, 409);
     assert.equal((await fetch(`${base}/photo`, { headers: headers(0) })).status, 200);
@@ -115,4 +116,5 @@ try {
   await closeDatabase();
   console.log('Ficheiros e dados temporários do teste removidos.');
 }
+
 

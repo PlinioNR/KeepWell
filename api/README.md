@@ -537,3 +537,42 @@ npm.cmd run test:photos usa duas contas temporárias e imagens geradas para veri
 upload, acesso por dono, substituição, remoção e limpeza ao eliminar o objeto. Remove
 os dados e ficheiros do teste no final. A captura pela câmara/galeria e a apresentação
 da fotografia no Flutter ainda não foram implementadas nesta etapa.
+
+## Cuidados/tarefas — EDT 4.2.4 e primeira etapa de 4.4.2
+
+Uma tarefa pertence a um objeto e ao seu dono. Coleção tasks com _id, objectId e
+userId (ObjectId), title (2–120 caracteres, espaços normalizados), dueOn (AAAA-MM-DD),
+status, completedAt, createdAt e updatedAt. A criação usa sempre status=pending e
+completedAt=null. O cliente não controla estado, dono ou datas internas.
+A data prevista é obrigatória, sem hora, validada contra o calendário. Pode ser
+passada, permitindo registar cuidados já em atraso. Não se guarda um estado overdue:
+o atraso dependerá da data e do estado, nos filtros que serão implementados depois.
+
+POST /tasks recebe apenas {"objectId":"ID_REAL","title":"Limpar o filtro","dueOn":"2026-11-15"}.
+Exige Bearer e Content-Type application/json. Resposta 201 com task e Location.
+O objeto tem de existir e pertencer à conta. Objeto alheio e inexistente devolvem 404.
+Dados/identificadores inválidos: 400. Sem sessão: 401. Tipo de conteúdo errado: 415.
+
+GET /tasks lista apenas tarefas do dono, ordenadas por dueOn ascendente, com id como
+desempate. Paginação page=1 e pageSize=20 por defeito, máximo pageSize=100 e page=1000000.
+Resposta {tasks:[...],page,pageSize,total}. O total e lista podem refletir momentos
+ligeiramente diferentes se houver alterações simultâneas. GET /tasks/:id devolve task
+ou 404 para inexistente/alheia. A resposta não expõe userId. Admins também só consultam
+as suas tarefas pessoais nestas rotas.
+
+A criação escreve em objects.referenceVersion dentro da mesma transação que insere
+a tarefa. É o protocolo partilhado com deleteObject para impedir tarefas órfãs.
+Eliminar um objeto com tarefas continua bloqueado com 409.
+
+setupTasks configura validação estrita, índice por dono/data e por objeto. O schema
+prepara dois estados coerentes: pending com completedAt null ou completed com uma data.
+A conclusão ainda não tem rota; não se devem alterar estes campos diretamente no cliente.
+
+Ficheiros: models/task.js, services/tasks.js, routes/tasks.js.
+Comandos: npm.cmd run db:setup, npm.cmd test e npm.cmd run test:tasks.
+O teste de integração usa duas contas temporárias e remove apenas os seus dados.
+Os fixtures de objetos/fotografias foram atualizados para o modelo real de tarefas.
+
+Ainda pendentes: edição/eliminação da tarefa, concluir, histórico, filtro por estado ou
+objeto, repetição, lembretes e associação a dicas. Esta etapa não implementa nem agenda
+notificações. O Flutter ainda precisa do formulário e serviço de cuidados.

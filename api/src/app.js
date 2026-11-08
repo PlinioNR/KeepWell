@@ -4,6 +4,7 @@ import { pingDatabase } from './database.js';
 import authRoutes from './routes/auth.js';
 import categoryRoutes from './routes/categories.js';
 import objectRoutes from './routes/objects.js';
+import taskRoutes from './routes/tasks.js';
 
 // O Express recebe os pedidos HTTP e permite definir as rotas da API.
 const app = express();
@@ -31,6 +32,7 @@ app.get('/health/database', async (_req, res) => {
 app.use('/auth', authRoutes);
 app.use('/categories', categoryRoutes);
 app.use('/objects', objectRoutes);
+app.use('/tasks', taskRoutes);
 
 // Devolve JSON também quando o cliente pede uma rota que não existe.
 app.use((_req, res) => {
@@ -65,6 +67,7 @@ app.use((error, _req, res, _next) => {
 
 
 export default app;
+
 
 
 

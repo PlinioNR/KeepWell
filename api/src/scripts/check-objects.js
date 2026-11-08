@@ -1,3 +1,4 @@
+import { buildTask } from '../models/task.js';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { ObjectId } from 'mongodb';
@@ -165,7 +166,7 @@ try {
 
   // Referência técnica temporária para testar a regra, antes do modelo de tarefas.
   // O id do objeto identifica exclusivamente os dados deste teste.
-  const task = await database.collection('tasks').insertOne({ objectId: new ObjectId(object.id), userId: userIds[0] });
+  const task = await database.collection('tasks').insertOne(buildTask({ objectId: object.id, title: 'Cuidado temporário', dueOn: '2026-11-08' }, userIds[0]));
   try {
     assert.equal((await request(0, 'DELETE', `/${object.id}`)).status, 409);
     assert.equal((await request(0, 'GET', `/${object.id}`)).status, 200);
@@ -193,6 +194,7 @@ try {
   if (server) await new Promise(resolve => server.close(resolve));
   await closeDatabase();
 }
+
 
 
 
