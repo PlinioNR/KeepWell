@@ -1,3 +1,4 @@
+import multer from 'multer';
 import express from 'express';
 import { pingDatabase } from './database.js';
 import authRoutes from './routes/auth.js';
@@ -39,6 +40,12 @@ app.use((_req, res) => {
 // Trata erros sem enviar detalhes internos do servidor para o cliente.
 // O Express identifica este middleware pelos quatro argumentos.
 app.use((error, _req, res, _next) => {
+  if (error instanceof multer.MulterError) {
+    const tooLarge = error.code === 'LIMIT_FILE_SIZE';
+    return res.status(tooLarge ? 413 : 400).json({ error: tooLarge
+      ? 'A fotografia deve ter no máximo 5 MiB.'
+      : 'Envia apenas um ficheiro no campo photo, sem outros campos.' });
+  }
   if (error.type === 'entity.parse.failed') {
     return res.status(400).json({ error: 'O corpo do pedido contém JSON inválido.' });
   }
@@ -48,7 +55,7 @@ app.use((error, _req, res, _next) => {
   }
 
   // Só estes códigos são usados pelos erros previstos de validação/registo.
-  if ([400, 401, 403, 404, 409, 503].includes(error.status)) {
+  if ([400, 401, 403, 404, 409, 413, 415, 503].includes(error.status)) {
     return res.status(error.status).json({ error: error.message });
   }
 
@@ -58,6 +65,7 @@ app.use((error, _req, res, _next) => {
 
 
 export default app;
+
 
 
 

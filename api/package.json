@@ -14,7 +14,8 @@
     "admin:promote": "node --env-file=.env src/scripts/promote-admin.js",
     "test:categories": "node --env-file=.env src/scripts/check-category-admin.js",
     "test:objects": "node --env-file=.env src/scripts/check-objects.js",
-    "seed:demo": "node --env-file=.env src/scripts/seed-demo.js"
+    "seed:demo": "node --env-file=.env src/scripts/seed-demo.js",
+    "test:photos": "node --env-file=.env src/scripts/check-photos.js"
   },
   "engines": {
     "node": ">=24"
@@ -22,6 +23,8 @@
   "dependencies": {
     "express": "^5.3.0",
     "express-rate-limit": "^8.7.3",
-    "mongodb": "^7.8.0"
+    "mongodb": "^7.8.0",
+    "multer": "^2.5.0",
+    "sharp": "^0.35.5"
   }
 }

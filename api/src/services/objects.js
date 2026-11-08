@@ -1,3 +1,4 @@
+import { removePhotoFile } from '../storage/photo-files.js';
 import { ObjectId } from 'mongodb';
 import { getDatabase, withDatabaseTransaction } from '../database.js';
 import { buildObject, parseObjectId, toPublicObject } from '../models/object.js';
@@ -124,11 +125,11 @@ export async function updateObject(id, body, userId) {
 
 export async function deleteObject(id, userId) {
   const _id = parseObjectId(id);
-  return withDatabaseTransaction(async (database, session) => {
+  const photoKey = await withDatabaseTransaction(async (database, session) => {
     // Escrita no objeto para coordenar com futuras criações de tarefas.
     const object = await database.collection('objects').findOneAndUpdate(
       { _id, userId }, { $inc: { referenceVersion: 1 } },
-      { session, returnDocument: 'after', projection: { _id: 1 } }
+      { session, returnDocument: 'after', projection: { _id: 1, photoKey: 1 } }
     );
     if (!object) throw Object.assign(new Error('Objeto não encontrado.'), { status: 404 });
     const task = await database.collection('tasks').findOne({ objectId: _id }, { session, projection: { _id: 1 } });
@@ -136,8 +137,13 @@ export async function deleteObject(id, userId) {
       throw Object.assign(new Error('O objeto tem tarefas associadas e não pode ser eliminado.'), { status: 409 });
     }
     await database.collection('objects').deleteOne({ _id, userId }, { session });
+    return object.photoKey;
   });
+  // Só remove a imagem depois da eliminação do objeto ser confirmada.
+  await removePhotoFile(photoKey);
 }
+
+
 
 
 

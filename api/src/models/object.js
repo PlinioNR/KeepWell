@@ -48,6 +48,7 @@ export function buildObject(body, userId) {
 export function toPublicObject(object) {
   return {
     id: object._id.toString(), name: object.name, description: object.description ?? '', categoryId: object.categoryId.toString(), acquiredOn: object.acquiredOn ?? null,
+    photoUrl: object.photoKey ? `/objects/${object._id.toString()}/photo` : null,
     createdAt: object.createdAt, updatedAt: object.updatedAt
   };
 }
@@ -61,6 +62,7 @@ export async function setupObjects(database) {
         _id: { bsonType: 'objectId' },
         referenceVersion: { bsonType: ['int', 'long'], minimum: 0 },
         name: { bsonType: 'string', minLength: 2, maxLength: 100, pattern: '^\\S(?:[\\s\\S]*\\S)$' },
+        photoKey: { bsonType: ['string', 'null'], pattern: '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\\.jpg$' },
         description: { bsonType: 'string', maxLength: 1000 },
         acquiredOn: { bsonType: ['string', 'null'], pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
         userId: { bsonType: 'objectId' }, categoryId: { bsonType: 'objectId' },
@@ -77,6 +79,7 @@ export async function setupObjects(database) {
   await database.collection('objects').createIndex({ userId: 1, createdAt: -1, _id: -1 }, { name: 'objects_owner_date' });
   await database.collection('objects').createIndex({ categoryId: 1 }, { name: 'objects_category' });
 }
+
 
 
 

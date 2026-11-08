@@ -1,4 +1,7 @@
 import { Router } from 'express';
+import { rateLimit } from 'express-rate-limit';
+import { requirePhotoOwner, saveObjectPhoto, getObjectPhoto, deleteObjectPhoto } from '../services/object-photos.js';
+import { receivePhoto, limitPhotoConcurrency } from '../middleware/receive-photo.js';
 import { requireAuth } from '../middleware/require-auth.js';
 import { createObject, listObjects, getObject, updateObject, deleteObject } from '../services/objects.js';
 
@@ -25,5 +28,26 @@ router.delete('/:id', async (req, res) => {
   await deleteObject(req.params.id, req.auth.user._id);
   res.status(204).end();
 });
+const photoRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: 'draft-8', legacyHeaders: false,
+  message: { error: 'Demasiados envios de fotografias. Tenta novamente dentro de 15 minutos.' }
+});
+router.put('/:id/photo', photoRateLimit, requirePhotoOwner, limitPhotoConcurrency, (req, res, next) => {
+  if (!req.is('multipart/form-data')) return res.status(415).json({ error: 'Envia a fotografia como multipart/form-data.' });
+  next();
+}, receivePhoto, async (req, res) => {
+  const object = await saveObjectPhoto(req.params.id, req.auth.user._id, req.file?.buffer);
+  res.status(200).json({ object });
+});
+router.get('/:id/photo', async (req, res) => {
+  const image = await getObjectPhoto(req.params.id, req.auth.user._id);
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.type('image/jpeg').status(200).send(image);
+});
+router.delete('/:id/photo', async (req, res) => {
+  await deleteObjectPhoto(req.params.id, req.auth.user._id);
+  res.status(204).end();
+});
 export default router;
+
 

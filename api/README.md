@@ -459,3 +459,81 @@ no Flutter desta revisão; a interface e o Figma não foram alterados nesta etap
 
 Esta decisão resolve a descrição visível no detalhe do protótipo. A fotografia
 continua pendente. Os testes locais e de integração de objetos cobrem os novos casos.
+
+## Fotografias dos objetos — EDT 4.5
+
+Uma fotografia por objeto, privada. Primeiro cria o objeto por POST /objects e depois
+usa PUT /objects/:id/photo. Todas as rotas exigem Authorization Bearer e o dono do
+objeto. Uma conta admin também não pode consultar fotografias de objetos alheios.
+
+| Método e rota | Pedido/resposta |
+|---|---|
+| PUT /objects/:id/photo | multipart/form-data, um ficheiro no campo photo; 200 com object |
+| GET /objects/:id/photo | 200 image/jpeg, Cache-Control no-store |
+| DELETE /objects/:id/photo | 204; repetição sem foto também devolve 204 |
+
+A resposta pública do objeto inclui photoUrl relativo (/objects/ID/photo), ou null.
+O caminho do disco e photoKey não são expostos. O Flutter deve fazer o pedido da imagem
+com o mesmo cabeçalho Authorization; uma URL sem o token não dá acesso à fotografia.
+Ao substituir uma imagem, a referência anterior é removida e o seu ficheiro é limpo.
+Ao eliminar um objeto, o ficheiro só é removido depois do commit da eliminação; se houver
+tarefas e a eliminação for bloqueada, a fotografia mantém-se.
+
+Formatos de entrada: JPEG, PNG e WebP estáticos. Até 5 MiB (5*1024*1024 bytes) e
+25 megapíxeis. O MIME declarado não é suficiente: sharp verifica e descodifica o
+conteúdo. A saída é JPEG, qualidade 85, até 1600x1600 mantendo proporções, sem ampliar,
+com fundo branco para transparências. Corrige orientação EXIF e remove metadados,
+incluindo EXIF/GPS. HEIC, SVG, GIF e formatos animados não são aceites nesta versão.
+
+Multer recebe um único ficheiro, sem outros campos. Limite de 30 envios por IP em
+15 minutos e dois uploads em simultâneo por processo. 400 para campo ausente/errado
+ou multipart com campos extra; 401 sem sessão; 404 para objeto inexistente/alheio ou
+fotografia ausente; 413 acima do limite; 415 para formato/conteúdo inválido; 429 para
+limite de tentativas; 503 para limite de concorrência. Erros internos devolvem 500.
+
+### Armazenamento e consistência
+
+Ficheiros em api/storage/object-photos/, com nome UUID gerado no servidor. A pasta
+/storage/ está excluída do Git; o código em src/storage/ NÃO está excluído. O MongoDB
+guarda apenas photoKey opcional. Objetos anteriores continuam sem fotografia.
+Não existe express.static para esta pasta: o acesso passa pela verificação do dono.
+
+É armazenamento local de desenvolvimento/demonstração. É necessário copiar/preservar
+esta pasta juntamente com a base de dados para manter as imagens. Ao alojar a API,
+configurar disco persistente ou migrar para armazenamento de objetos; não usar disco
+efémero. Múltiplas instâncias precisariam de armazenamento partilhado.
+
+Disco e MongoDB não partilham uma transação: o código remove uploads novos se a
+associação falha, limpa imagens substituídas e evita apagar se a confirmação da BD é
+incerta. Uma queda do processo entre passos pode deixar ficheiros órfãos, cuja limpeza
+operacional fica para a fase de alojamento. Não há garantia atómica entre disco e BD.
+
+Ficheiros: src/storage/photo-files.js (imagem/disco), src/services/object-photos.js
+(associação/acesso), src/middleware/receive-photo.js (multipart e limites).
+Dependências: multer e sharp. Referências:
+https://expressjs.com/en/resources/middleware/multer/
+https://sharp.pixelplumbing.com/api-output/
+
+### Testar no PowerShell (compatível com Windows PowerShell)
+
+Usa curl.exe para enviar multipart; não defines manualmente o Content-Type porque o
+curl acrescenta a fronteira necessária. Mantém a variável login no mesmo terminal.
+
+```powershell
+$idObjeto = "ID_REAL_DO_TEU_OBJETO"
+$caminhoFoto = "C:\caminho\fotografia.jpg"
+curl.exe --request PUT "http://localhost:3000/objects/$idObjeto/photo" --header "Authorization: Bearer $($login.token)" --form "photo=@$caminhoFoto"
+```
+
+Consulta os dados do objeto por GET /objects/:id para confirmar photoUrl.
+Para remover só a fotografia:
+
+```powershell
+Invoke-RestMethod -Method Delete -Uri "http://localhost:3000/objects/$idObjeto/photo" -Headers $cabecalhos
+```
+
+npm.cmd test valida limites, conteúdo, orientação, dimensões, metadados e caminhos.
+npm.cmd run test:photos usa duas contas temporárias e imagens geradas para verificar
+upload, acesso por dono, substituição, remoção e limpeza ao eliminar o objeto. Remove
+os dados e ficheiros do teste no final. A captura pela câmara/galeria e a apresentação
+da fotografia no Flutter ainda não foram implementadas nesta etapa.
