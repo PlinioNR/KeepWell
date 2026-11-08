@@ -34,12 +34,12 @@ export function buildTask(body, userId) {
   const now = new Date();
   // Estado e datas internas são definidos pelo servidor, não pelo cliente.
   return { objectId: new ObjectId(body.objectId), userId, title, dueOn,
-    status: 'pending', completedAt: null, createdAt: now, updatedAt: now };
+    status: 'pending', completedAt: null, notes: '', createdAt: now, updatedAt: now };
 }
 
 export function toPublicTask(task) {
   return { id: task._id.toString(), objectId: task.objectId.toString(), title: task.title,
-    dueOn: task.dueOn, status: task.status, completedAt: task.completedAt,
+    dueOn: task.dueOn, status: task.status, completedAt: task.completedAt, notes: task.notes ?? '',
     createdAt: task.createdAt, updatedAt: task.updatedAt };
 }
 
@@ -52,10 +52,11 @@ export async function setupTasks(database) {
         _id: { bsonType: 'objectId' }, objectId: { bsonType: 'objectId' }, userId: { bsonType: 'objectId' },
         title: { bsonType: 'string', minLength: 2, maxLength: 120, pattern: '^\\S(?:[\\s\\S]*\\S)$' },
         dueOn: { bsonType: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
+        notes: { bsonType: 'string', maxLength: 1000 },
         status: { enum: ['pending', 'completed'] }, completedAt: { bsonType: ['date', 'null'] },
         createdAt: { bsonType: 'date' }, updatedAt: { bsonType: 'date' }
       },
-      // Prepara uma conclusão coerente, sem ainda disponibilizar essa operação.
+      // Uma tarefa pendente não tem data de realização; uma concluída tem de a ter.
       oneOf: [
         { properties: { status: { enum: ['pending'] }, completedAt: { bsonType: 'null' } } },
         { properties: { status: { enum: ['completed'] }, completedAt: { bsonType: 'date' } } }
@@ -70,4 +71,6 @@ export async function setupTasks(database) {
   }
   await database.collection('tasks').createIndex({ userId: 1, dueOn: 1, _id: 1 }, { name: 'tasks_owner_date' });
   await database.collection('tasks').createIndex({ objectId: 1 }, { name: 'tasks_object' });
+  await database.collection('tasks').createIndex({ userId: 1, objectId: 1, status: 1, completedAt: -1, _id: -1 }, { name: 'tasks_object_history' });
 }
+

@@ -69,6 +69,55 @@ try {
   await assert.rejects(database.collection('tasks').insertOne({
     ...buildTask(valid, userIds[0]), completedAt: new Date()
   }), { code: 121 });
+  // Conclusão e histórico respeitam o dono e não duplicam registos.
+  assert.equal((await request(1, 'POST', `/${created.task.id}/complete`, {})).status, 404);
+  assert.equal((await request(0, 'POST', '/invalido/complete', {})).status, 400);
+  assert.equal((await request(0, 'POST', `/${created.task.id}/complete`, { completedAt: new Date() })).status, 400);
+  assert.equal((await request(0, 'POST', `/${created.task.id}/complete`, { notes: null })).status, 400);
+  response = await request(0, 'POST', `/${created.task.id}/complete`, { notes: '  Filtro lavado e testado.  ' });
+  assert.equal(response.status, 200);
+  const completed = (await response.json()).task;
+  assert.equal(completed.status, 'completed');
+  assert.ok(Number.isFinite(Date.parse(completed.completedAt)));
+  assert.equal(completed.notes, 'Filtro lavado e testado.');
+  assert.equal(completed.createdAt, created.task.createdAt);
+  assert.equal(completed.dueOn, valid.dueOn);
+  response = await request(0, 'POST', `/${created.task.id}/complete`, { notes: 'Outra observação' });
+  const repeated = (await response.json()).task;
+  assert.equal(repeated.completedAt, completed.completedAt);
+  assert.equal(repeated.updatedAt, completed.updatedAt);
+  assert.equal(repeated.notes, completed.notes);
+  assert.equal(await database.collection('tasks').countDocuments({ _id: new ObjectId(created.task.id) }), 1);
+  const historyUrl = `http://127.0.0.1:${server.address().port}/objects/${object.id}/history`;
+  const auth = index => ({ headers: { Authorization: `Bearer ${tokens[index]}` } });
+  assert.equal((await fetch(historyUrl)).status, 401);
+  assert.equal((await fetch(historyUrl, auth(1))).status, 404);
+  response = await fetch(historyUrl, auth(0));
+  let history = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(history.total, 1);
+  assert.equal(history.tasks[0].id, completed.id);
+  assert.equal(history.tasks[0].notes, completed.notes);
+  assert.equal(history.tasks[0].status, 'completed');
+  const parallel = await Promise.all([
+    request(0, 'POST', `/${second.id}/complete`, {}),
+    request(0, 'POST', `/${second.id}/complete`, {})
+  ]);
+  assert.ok(parallel.every(item => item.status === 200));
+  const completions = await Promise.all(parallel.map(item => item.json()));
+  assert.equal(completions[0].task.completedAt, completions[1].task.completedAt);
+  response = await fetch(historyUrl + '?pageSize=1', auth(0));
+  const firstPage = await response.json();
+  response = await fetch(historyUrl + '?pageSize=1&page=2', auth(0));
+  const secondPage = await response.json();
+  assert.equal(firstPage.total, 2);
+  assert.equal(firstPage.tasks.length, 1);
+  assert.notEqual(firstPage.tasks[0].id, secondPage.tasks[0].id);
+  assert.ok(Date.parse(firstPage.tasks[0].completedAt) >= Date.parse(secondPage.tasks[0].completedAt));
+  const emptyHistory = await fetch(`http://127.0.0.1:${server.address().port}/objects/${otherObject.id}/history`, auth(1));
+  assert.equal((await emptyHistory.json()).total, 0);
+  assert.equal((await fetch(historyUrl + '?pageSize=101', auth(0))).status, 400);
+  await assert.rejects(deleteObject(object.id, userIds[0]), { status: 409 });
   const raceObject = await createObject({ name: 'Objeto concorrente', categoryId: category.id }, userIds[0]);
   const results = await Promise.allSettled([
     createTask({ ...valid, objectId: raceObject.id }, userIds[0]),
@@ -79,7 +128,7 @@ try {
   const tasks = await database.collection('tasks').countDocuments({ objectId: raceId });
   const parent = await database.collection('objects').findOne({ _id: raceId });
   assert.ok(tasks === 0 || parent !== null, 'Não pode existir tarefa sem objeto.');
-  console.log('Cuidados verificados: criação, calendário, estado, consultas, paginação, dono, validação MongoDB e concorrência.');
+  console.log('Cuidados verificados: criação, calendário, estado, conclusão idempotente, histórico, paginação, dono, validação MongoDB e concorrência.');
 } finally {
   if (database && userIds.length) {
     await database.collection('tasks').deleteMany({ userId: { $in: userIds } });
@@ -93,3 +142,4 @@ try {
   if (server) await new Promise(resolve => server.close(resolve));
   await closeDatabase();
 }
+

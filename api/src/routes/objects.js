@@ -1,3 +1,4 @@
+import { listObjectHistory } from '../services/tasks.js';
 import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { requirePhotoOwner, saveObjectPhoto, getObjectPhoto, deleteObjectPhoto } from '../services/object-photos.js';
@@ -48,6 +49,10 @@ router.delete('/:id/photo', async (req, res) => {
   await deleteObjectPhoto(req.params.id, req.auth.user._id);
   res.status(204).end();
 });
+router.get('/:id/history', async (req, res) => {
+  res.status(200).json(await listObjectHistory(req.params.id, req.auth.user._id, req.query));
+});
 export default router;
+
 
 

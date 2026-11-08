@@ -566,13 +566,62 @@ Eliminar um objeto com tarefas continua bloqueado com 409.
 
 setupTasks configura validação estrita, índice por dono/data e por objeto. O schema
 prepara dois estados coerentes: pending com completedAt null ou completed com uma data.
-A conclusão ainda não tem rota; não se devem alterar estes campos diretamente no cliente.
+A conclusão tem uma rota própria documentada na secção seguinte; o cliente não altera diretamente estes campos.
 
 Ficheiros: models/task.js, services/tasks.js, routes/tasks.js.
 Comandos: npm.cmd run db:setup, npm.cmd test e npm.cmd run test:tasks.
 O teste de integração usa duas contas temporárias e remove apenas os seus dados.
 Os fixtures de objetos/fotografias foram atualizados para o modelo real de tarefas.
 
-Ainda pendentes: edição/eliminação da tarefa, concluir, histórico, filtro por estado ou
+Conclusão e histórico estão implementados na secção seguinte. Ainda pendentes: edição/eliminação da tarefa e filtro por estado ou
 objeto, repetição, lembretes e associação a dicas. Esta etapa não implementa nem agenda
 notificações. O Flutter ainda precisa do formulário e serviço de cuidados.
+
+## Concluir cuidados e consultar histórico — EDT 4.4.2
+
+POST /tasks/:id/complete exige Bearer e Content-Type application/json.
+Recebe {} ou {"notes":"Filtro lavado e testado."}. As observações são opcionais,
+até 1000 caracteres após trim, preservando parágrafos. Outros campos são rejeitados.
+A data de realização não é escolhida pelo cliente: é definida pela API.
+
+Resposta HTTP 200 com task. Uma tarefa pendente passa a completed, com completedAt
+e updatedAt iguais ao instante do servidor e notes guardadas. Preserva createdAt,
+objectId, title e dueOn. Concluir antes da data prevista é permitido.
+A alteração usa uma única escrita atómica com filtro por id, dono e estado pending.
+Pedidos repetidos, incluindo simultâneos, devolvem a conclusão existente sem alterar
+data, observações ou criar outro registo. Novas observações enviadas depois da primeira
+conclusão não substituem as originais. Reabertura/edição de concluídos não existe nesta etapa.
+
+GET /objects/:id/history exige o dono do objeto. Devolve apenas tarefas completed,
+ordenadas por completedAt descendente e id como desempate. Paginação page=1 e pageSize=20,
+máximo pageSize=100. Resposta {tasks:[...],page,pageSize,total}. A contagem e a consulta
+podem refletir momentos próximos mas diferentes durante alterações concorrentes.
+Não existe coleção history duplicada: o histórico consulta tasks pelo estado.
+O evento "Objeto adicionado" do protótipo não é incluído nesta rota nesta etapa;
+a data de criação do objeto continua disponível no detalhe do objeto.
+
+Erros: 400 para dados/identificadores/paginação inválidos; 401 sem sessão; 404 para
+cuidado/objeto inexistente ou alheio; 415 para conclusão sem tipo JSON. Histórico vazio
+num objeto próprio devolve 200 e tasks:[], total:0. Mesmo com tarefas concluídas,
+a eliminação do objeto continua bloqueada para preservar os registos.
+
+notes é opcional na validação da coleção para compatibilidade com tarefas anteriores;
+a resposta usa string vazia quando não existe. O índice tasks_object_history suporta
+a consulta por dono, objeto, estado e data de realização.
+
+Ficheiros: models/task.js, services/tasks.js, routes/tasks.js e routes/objects.js.
+npm.cmd test e npm.cmd run test:tasks cobrem validação, conclusão, repetição,
+concorrência, histórico, paginação e isolamento. O teste Atlas remove os seus dados.
+
+Exemplo PowerShell, usando o mesmo terminal do login:
+
+```powershell
+$idCuidado = "ID_REAL_DO_CUIDADO"
+$dados = @{ notes = "Filtro lavado e testado." } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri "http://localhost:3000/tasks/$idCuidado/complete" -Headers $cabecalhos -ContentType "application/json; charset=utf-8" -Body ([System.Text.Encoding]::UTF8.GetBytes($dados))
+Invoke-RestMethod -Uri "http://localhost:3000/objects/$idObjeto/history" -Headers $cabecalhos | ConvertTo-Json -Depth 5
+```
+
+Pendentes: editar/eliminar tarefas, filtros por objeto/estado, repetição, lembretes,
+dicas e integração dos cuidados com o Flutter. Nenhum lembrete é agendado por esta operação.
+

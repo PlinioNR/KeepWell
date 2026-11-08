@@ -30,3 +30,14 @@ test('rejeita campos internos, datas inexistentes e dados inválidos', () => {
     assert.throws(() => parseTaskPagination(query), { status: 400 });
   }
 });
+
+test('a conclusão só aceita observações e não permite escolher o estado ou a data', async () => {
+  const { validateCompletion } = await import('../src/services/tasks.js');
+  assert.equal(validateCompletion({}), '');
+  assert.equal(validateCompletion({ notes: '  Limpo\nTestado  ' }), 'Limpo\nTestado');
+  assert.equal(validateCompletion({ notes: 'á'.repeat(1000) }).length, 1000);
+  for (const body of [null, [], { status: 'completed' }, { completedAt: new Date() },
+    { notes: null }, { notes: {} }, { notes: 'x'.repeat(1001) }]) {
+    assert.throws(() => validateCompletion(body), { status: 400 });
+  }
+});
