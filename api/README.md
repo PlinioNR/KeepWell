@@ -440,3 +440,22 @@ Usar bytes UTF-8 e Content-Type application/json; charset=utf-8 no PowerShell.
 Ainda pendentes do design: fotografia; descrição do objeto (aparece no detalhe mas
 não no formulário, precisa de decisão); próximo cuidado e histórico (dependem de tarefas).
 Não foi alterado o design no Figma ou a interface Flutter nesta etapa.
+
+## Descrição opcional dos objetos — decisão de 08/11/2026
+
+POST /objects e PATCH /objects/:id aceitam description, texto opcional até 1000
+caracteres após trim. As quebras de linha internas são preservadas. Omitir no POST
+usa string vazia; omitir no PATCH preserva o valor; enviar string vazia limpa o campo.
+Null, números, listas e objetos são rejeitados com HTTP 400.
+
+O campo é opcional na validação MongoDB para manter documentos antigos válidos.
+As respostas de criação, detalhe, listagem e edição incluem description, usando
+string vazia quando não existe no documento antigo. O controlo de dono mantém-se.
+
+No futuro formulário Flutter de adicionar/editar objeto, incluir um campo multilinha
+"Descrição (opcional)", até 1000 caracteres, depois da categoria. O ecrã de detalhe
+mostra o texto quando estiver preenchido. Os formulários de objetos ainda não existem
+no Flutter desta revisão; a interface e o Figma não foram alterados nesta etapa.
+
+Esta decisão resolve a descrição visível no detalhe do protótipo. A fotografia
+continua pendente. Os testes locais e de integração de objetos cobrem os novos casos.

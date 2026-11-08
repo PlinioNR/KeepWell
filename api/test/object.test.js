@@ -67,3 +67,17 @@ test('a data de aquisição valida o calendário, aceita null e mantém a data s
   assert.equal(object.acquiredOn, '2023-07-03');
   assert.equal(toPublicObject({ ...object, _id: new ObjectId() }).acquiredOn, '2023-07-03');
 });
+
+test('a descrição é opcional, preserva parágrafos e rejeita tipos ou tamanhos inválidos', () => {
+  const input = { name: 'Computador', categoryId };
+  assert.equal(buildObject(input, userId).description, '');
+  assert.equal(buildObject({ ...input, description: '  Primeira linha\nSegunda linha  ' }, userId).description, 'Primeira linha\nSegunda linha');
+  assert.equal(buildObject({ ...input, description: '' }, userId).description, '');
+  assert.equal(buildObject({ ...input, description: 'á'.repeat(1000) }, userId).description.length, 1000);
+  for (const description of [null, 123, [], {}, 'x'.repeat(1001)]) {
+    assert.throws(() => buildObject({ ...input, description }, userId), { status: 400 });
+  }
+  const legacy = { ...buildObject(input, userId), _id: new ObjectId() };
+  delete legacy.description;
+  assert.equal(toPublicObject(legacy).description, '');
+});

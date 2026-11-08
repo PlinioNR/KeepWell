@@ -93,15 +93,16 @@ export async function updateObject(id, body, userId) {
     const objects = database.collection('objects');
     const current = await objects.findOne({ _id, userId }, { session });
     if (!current) throw Object.assign(new Error('Objeto não encontrado.'), { status: 404 });
-    // PATCH aceita um ou ambos os campos; um pedido vazio não altera datas.
+    // PATCH aceita os campos editáveis; um pedido vazio não altera datas.
     if (!body || typeof body !== 'object' || Array.isArray(body) || !Object.keys(body).length ||
-        Object.keys(body).some(key => !['name', 'categoryId', 'acquiredOn'].includes(key))) {
-      throw Object.assign(new Error('Envia name, categoryId e/ou acquiredOn.'), { status: 400 });
+        Object.keys(body).some(key => !['name', 'categoryId', 'acquiredOn', 'description'].includes(key))) {
+      throw Object.assign(new Error('Envia name, categoryId, acquiredOn e/ou description.'), { status: 400 });
     }
     const validated = buildObject({
       name: Object.hasOwn(body, 'name') ? body.name : current.name,
       categoryId: Object.hasOwn(body, 'categoryId') ? body.categoryId : current.categoryId.toString(),
-      acquiredOn: Object.hasOwn(body, 'acquiredOn') ? body.acquiredOn : current.acquiredOn
+      acquiredOn: Object.hasOwn(body, 'acquiredOn') ? body.acquiredOn : current.acquiredOn,
+      description: Object.hasOwn(body, 'description') ? body.description : current.description
     }, userId);
     if (!validated.categoryId.equals(current.categoryId)) {
       // Usa o mesmo protocolo da criação para coordenar com deleteCategory.
@@ -113,7 +114,7 @@ export async function updateObject(id, body, userId) {
     }
     const updated = await objects.findOneAndUpdate(
       { _id, userId },
-      { $set: { name: validated.name, categoryId: validated.categoryId, acquiredOn: validated.acquiredOn, updatedAt: validated.updatedAt } },
+      { $set: { name: validated.name, description: validated.description, categoryId: validated.categoryId, acquiredOn: validated.acquiredOn, updatedAt: validated.updatedAt } },
       { session, returnDocument: 'after' }
     );
     if (!updated) throw Object.assign(new Error('Objeto não encontrado.'), { status: 404 });
@@ -137,5 +138,6 @@ export async function deleteObject(id, userId) {
     await database.collection('objects').deleteOne({ _id, userId }, { session });
   });
 }
+
 
 

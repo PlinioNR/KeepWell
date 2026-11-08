@@ -33,13 +33,15 @@ try {
   assert.equal((await fetch(base)).status, 401);
   assert.equal((await request(0, 'POST', '', { name: 'Teste', categoryId: new ObjectId().toString() })).status, 400);
   assert.equal((await request(0, 'POST', '', { name: 'Teste', categoryId: category.id, userId: userIds[1].toString() })).status, 400);
-  let response = await request(0, 'POST', '', { name: 'Portátil pessoal', categoryId: category.id, acquiredOn: '2023-07-03' });
+  let response = await request(0, 'POST', '', { name: 'Portátil pessoal', categoryId: category.id, acquiredOn: '2023-07-03', description: '  Computador pessoal.  ' });
   const created = await response.json();
   assert.equal(response.status, 201, JSON.stringify(created));
   const object = created.object;
   assert.equal(object.acquiredOn, '2023-07-03');
+  assert.equal(object.description, 'Computador pessoal.');
   const saved = await database.collection('objects').findOne({ _id: new ObjectId(object.id) });
   assert.ok(saved.userId.equals(userIds[0]));
+  assert.equal(saved.description, 'Computador pessoal.');
   assert.ok(saved.categoryId.equals(categoryIds[0]));
   response = await request(0, 'GET');
   const own = await response.json();
@@ -129,6 +131,19 @@ try {
   const edited = (await response.json()).object;
   assert.equal(edited.name, 'Portátil atualizado');
   assert.equal(edited.createdAt, object.createdAt);
+  assert.equal(edited.description, object.description);
+  assert.equal((await request(0, 'PATCH', `/${object.id}`, { description: null })).status, 400);
+  assert.equal((await request(0, 'PATCH', `/${object.id}`, { description: 'x'.repeat(1001) })).status, 400);
+  assert.equal((await request(1, 'PATCH', `/${object.id}`, { description: 'Tentativa externa' })).status, 404);
+  response = await request(0, 'PATCH', `/${object.id}`, { description: 'Primeira linha\nSegunda linha' });
+  assert.equal(response.status, 200);
+  const described = (await response.json()).object;
+  assert.equal(described.description, 'Primeira linha\nSegunda linha');
+  assert.equal(described.name, edited.name);
+  assert.equal(described.createdAt, object.createdAt);
+  response = await request(0, 'PATCH', `/${object.id}`, { description: '' });
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).object.description, '');
   assert.equal(edited.categoryId, object.categoryId);
   assert.equal(edited.acquiredOn, '2023-07-03');
   assert.equal((await request(0, 'PATCH', `/${object.id}`, { acquiredOn: '2025-02-29' })).status, 400);
@@ -178,6 +193,7 @@ try {
   if (server) await new Promise(resolve => server.close(resolve));
   await closeDatabase();
 }
+
 
 
 

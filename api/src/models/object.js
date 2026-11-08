@@ -21,8 +21,8 @@ export function validateAcquiredOn(value) {
 }
 export function buildObject(body, userId) {
   if (!body || typeof body !== 'object' || Array.isArray(body) ||
-      Object.keys(body).some(key => !['name', 'categoryId', 'acquiredOn'].includes(key))) {
-    throw Object.assign(new Error('Envia apenas name, categoryId e acquiredOn.'), { status: 400 });
+      Object.keys(body).some(key => !['name', 'categoryId', 'acquiredOn', 'description'].includes(key))) {
+    throw Object.assign(new Error('Envia apenas name, categoryId, acquiredOn e description.'), { status: 400 });
   }
   if (typeof body.name !== 'string') {
     throw Object.assign(new Error('Indica o nome do objeto.'), { status: 400 });
@@ -36,13 +36,18 @@ export function buildObject(body, userId) {
   }
   // O dono vem da sessão, nunca de body.userId.
   if (!(userId instanceof ObjectId)) throw new Error('Utilizador autenticado inválido.');
+  // Texto opcional: preserva parágrafos e remove apenas espaços das extremidades.
+  const description = body.description === undefined ? '' : body.description;
+  if (typeof description !== 'string' || [...description.trim()].length > 1000) {
+    throw Object.assign(new Error('A descrição deve ser texto com até 1000 caracteres.'), { status: 400 });
+  }
   const now = new Date();
-  return { name, userId, categoryId: new ObjectId(body.categoryId), acquiredOn: validateAcquiredOn(body.acquiredOn), createdAt: now, updatedAt: now };
+  return { name, description: description.trim(), userId, categoryId: new ObjectId(body.categoryId), acquiredOn: validateAcquiredOn(body.acquiredOn), createdAt: now, updatedAt: now };
 }
 
 export function toPublicObject(object) {
   return {
-    id: object._id.toString(), name: object.name, categoryId: object.categoryId.toString(), acquiredOn: object.acquiredOn ?? null,
+    id: object._id.toString(), name: object.name, description: object.description ?? '', categoryId: object.categoryId.toString(), acquiredOn: object.acquiredOn ?? null,
     createdAt: object.createdAt, updatedAt: object.updatedAt
   };
 }
@@ -56,6 +61,7 @@ export async function setupObjects(database) {
         _id: { bsonType: 'objectId' },
         referenceVersion: { bsonType: ['int', 'long'], minimum: 0 },
         name: { bsonType: 'string', minLength: 2, maxLength: 100, pattern: '^\\S(?:[\\s\\S]*\\S)$' },
+        description: { bsonType: 'string', maxLength: 1000 },
         acquiredOn: { bsonType: ['string', 'null'], pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
         userId: { bsonType: 'objectId' }, categoryId: { bsonType: 'objectId' },
         createdAt: { bsonType: 'date' }, updatedAt: { bsonType: 'date' }
@@ -71,5 +77,6 @@ export async function setupObjects(database) {
   await database.collection('objects').createIndex({ userId: 1, createdAt: -1, _id: -1 }, { name: 'objects_owner_date' });
   await database.collection('objects').createIndex({ categoryId: 1 }, { name: 'objects_category' });
 }
+
 
 
