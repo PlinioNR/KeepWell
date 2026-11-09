@@ -655,3 +655,7 @@ Os limites combinam com status, objectId e paginação. O total conta os cuidado
 correspondem a todos os filtros antes da paginação. Datas inválidas ou invertidas
 devolvem 400. Para os próximos cuidados da semana, usa status=pending e dueTo com
 a data de domingo.
+
+GET /objects e GET /objects/:id devolvem nextCare em cada objeto. Contém id, title
+e dueOn do primeiro cuidado pendente com data de hoje ou posterior, ou null se
+não houver nenhum. A seleção usa o calendário de Lisboa e desempata por id.

@@ -151,7 +151,16 @@ try {
   }
   assert.equal((await request(0, 'GET', '?dueFrom=2026-02-30')).status, 400);
   assert.equal((await request(0, 'GET', '?dueFrom=2026-12-01&dueTo=2026-11-01')).status, 400);
+  const objectsUrl = `http://127.0.0.1:${server.address().port}/objects`;
+  const detail = await fetch(`${objectsUrl}/${object.id}`, auth(0));
+  assert.deepEqual((await detail.json()).object.nextCare, {
+    id: editable.id, title: 'Filtro novo', dueOn: '2099-01-01'
+  });
+  const objectPage = await fetch(objectsUrl, auth(0));
+  assert.equal((await objectPage.json()).objects.find(item => item.id === object.id).nextCare.id, editable.id);
   assert.equal((await request(0, 'DELETE', `/${editable.id}`)).status, 204);
+  const afterDelete = await fetch(`${objectsUrl}/${object.id}`, auth(0));
+  assert.equal((await afterDelete.json()).object.nextCare, null);
   assert.equal((await request(0, 'GET', `/${editable.id}`)).status, 404);
   const raceObject = await createObject({ name: 'Objeto concorrente', categoryId: category.id }, userIds[0]);
   const results = await Promise.allSettled([
@@ -177,6 +186,7 @@ try {
   if (server) await new Promise(resolve => server.close(resolve));
   await closeDatabase();
 }
+
 
 
 
