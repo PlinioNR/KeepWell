@@ -1,3 +1,6 @@
+import { requireAuth } from './middleware/require-auth.js';
+import { requireAdmin } from './middleware/require-admin.js';
+import { checkPhotoStorage } from './storage/photo-files.js';
 import multer from 'multer';
 import express from 'express';
 import { pingDatabase } from './database.js';
@@ -27,6 +30,17 @@ app.get('/health/database', async (_req, res) => {
     res.status(200).json({ status: 'ok', database: 'connected' });
   } catch {
     res.status(503).json({ status: 'error', database: 'unavailable' });
+  }
+});
+
+// A verificação escreve no disco, por isso exige uma sessão de administrador.
+app.get('/health/storage', requireAuth, requireAdmin, async (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  try {
+    await checkPhotoStorage();
+    res.status(200).json({ status: 'ok', storage: 'available' });
+  } catch {
+    res.status(503).json({ status: 'error', storage: 'unavailable' });
   }
 });
 
@@ -71,6 +85,7 @@ app.use((error, _req, res, _next) => {
 
 
 export default app;
+
 
 
 

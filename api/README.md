@@ -711,3 +711,15 @@ e dicas de demonstração. Reutiliza os registos encontrados pelo dono, nome e
 categoria ou objeto correspondente, preservando os IDs dos objetos. Na primeira
 execução cria exemplos para hoje, em atraso, futuros, recorrentes e concluídos.
 As datas dos exemplos já existentes seguem o percurso normal dos cuidados.
+
+Para usar uma pasta persistente fora do código, define PHOTO_DIRECTORY no .env
+com um caminho absoluto, por exemplo C:/KeepWell/dados/fotografias. Sem esta
+variável, a API usa api/storage/object-photos/. Ao mudar de pasta, copia os
+ficheiros existentes mantendo os nomes antes de reiniciar a API. As referências
+guardadas no MongoDB continuam a usar as mesmas chaves. Usa uma pasta privada
+com permissão de leitura e escrita para o processo da API.
+
+GET /health/storage exige uma sessão de administrador. A API escreve, lê e
+remove um ficheiro temporário na pasta de fotografias. Devolve 200 com storage
+available quando o teste passa, ou 503 com storage unavailable se falhar.
+A resposta não expõe o caminho da pasta.

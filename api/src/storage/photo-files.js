@@ -1,11 +1,16 @@
-import { mkdir, writeFile, readFile, unlink } from 'node:fs/promises';
+import { mkdir, writeFile, readFile, unlink, open } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 
-// Caminho fixo relativo ao projeto, independente da pasta do terminal.
-export const photoDirectory = fileURLToPath(new URL('../../storage/object-photos/', import.meta.url));
+const configuredDirectory = process.env.PHOTO_DIRECTORY?.trim();
+if (configuredDirectory && !isAbsolute(configuredDirectory)) {
+  throw new Error('PHOTO_DIRECTORY deve ser um caminho absoluto.');
+}
+
+// O caminho por defeito é relativo ao projeto e independe da pasta do terminal.
+export const photoDirectory = configuredDirectory || fileURLToPath(new URL('../../storage/object-photos/', import.meta.url));
 export const maxPhotoBytes = 5 * 1024 * 1024;
 
 function photoPath(key) {
@@ -58,5 +63,25 @@ export async function removePhotoFile(key) {
   catch (error) {
     // Não falha uma alteração já confirmada na BD por uma falha de limpeza no disco.
     if (error.code !== 'ENOENT') console.error('Não foi possível limpar um ficheiro de fotografia.');
+  }
+}
+
+
+
+export async function checkPhotoStorage() {
+  await mkdir(photoDirectory, { recursive: true });
+  const path = join(photoDirectory, '.health-' + randomUUID());
+  const probe = await open(path, 'wx');
+  try {
+    try {
+      await probe.writeFile('keepwell');
+    } finally {
+      await probe.close();
+    }
+    if (await readFile(path, 'utf8') !== 'keepwell') {
+      throw new Error('Falha na leitura do ficheiro de verificação.');
+    }
+  } finally {
+    await unlink(path);
   }
 }
