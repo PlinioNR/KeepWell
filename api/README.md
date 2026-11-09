@@ -698,3 +698,10 @@ page, pageSize e total. Inclui apenas cuidados da conta com reminderEnabled
 ativo, pendentes e previstos para hoje ou depois no calendário de Lisboa.
 Quando a preferência geral de lembretes está desligada, a lista vem vazia.
 O cliente pode usar esta consulta como entrada para o agendamento local.
+
+GET /notifications exige sessão e devolve dueToday, overdue e recent com até
+20 itens por grupo. Os dois primeiros usam cuidados pendentes e a data de Lisboa.
+recent junta conclusões e objetos adicionados, ordenados por occurredAt desc.
+Cada item inclui type, id e objectId, e itens de cuidado incluem taskId e dueOn.
+A lista é calculada na leitura a partir de tasks e objects. As preferências de
+lembrete continuam a ser usadas pela rota de agendamento GET /tasks/reminders.

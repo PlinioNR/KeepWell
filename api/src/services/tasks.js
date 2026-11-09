@@ -31,7 +31,7 @@ export function parseTaskPagination(query = {}) {
   return { page: parse(query.page, 1, 1000000), pageSize: parse(query.pageSize, 20, 100) };
 }
 
-function lisbonDate(now) {
+export function lisbonDate(now) {
   return new Intl.DateTimeFormat('sv-SE', {
     timeZone: 'Europe/Lisbon', year: 'numeric', month: '2-digit', day: '2-digit'
   }).format(now);
@@ -198,6 +198,7 @@ export async function deleteTask(id, userId) {
   const result = await collection.deleteOne({ ...filter, status: 'pending' });
   if (!result.deletedCount) await rejectPendingChange(collection, filter);
 }
+
 
 
 

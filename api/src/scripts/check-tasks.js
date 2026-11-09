@@ -7,7 +7,7 @@ import { registerUser } from '../services/registration.js';
 import { loginUser } from '../services/authentication.js';
 import { createCategory } from '../services/categories.js';
 import { createObject, deleteObject } from '../services/objects.js';
-import { createTask } from '../services/tasks.js';
+import { createTask, lisbonDate } from '../services/tasks.js';
 import { buildTask } from '../models/task.js';
 
 const marker = randomUUID();
@@ -208,6 +208,21 @@ try {
   assert.equal(await database.collection('tasks').countDocuments({
     objectId: new ObjectId(object.id), title: recurring.title, status: 'pending'
   }), 0);
+  const todayTask = await createTask({ ...valid, title: 'Cuidado para hoje', dueOn: lisbonDate(new Date()) }, userIds[0]);
+  const notificationsUrl = 'http://127.0.0.1:' + server.address().port + '/notifications';
+  assert.equal((await fetch(notificationsUrl)).status, 401);
+  const notificationResponse = await fetch(notificationsUrl, auth(0));
+  assert.equal(notificationResponse.status, 200);
+  assert.equal(notificationResponse.headers.get('cache-control'), 'no-store');
+  const notifications = await notificationResponse.json();
+  assert.deepEqual(notifications.dueToday.map(item => item.taskId), [todayTask.id]);
+  assert.ok(notifications.overdue.some(item => item.taskId === overdue.id));
+  assert.ok(!notifications.overdue.some(item => item.taskId === completed.id));
+  assert.ok(notifications.recent.some(item => item.type === 'taskCompleted' && item.taskId === completed.id));
+  assert.ok(notifications.recent.some(item => item.type === 'objectAdded' && item.objectId === object.id));
+  assert.ok(Object.values(notifications).flat().every(item => item.objectId !== otherObject.id));
+  const otherFeed = await (await fetch(notificationsUrl, auth(1))).json();
+  assert.ok(Object.values(otherFeed).flat().every(item => item.objectId !== object.id));
   const raceObject = await createObject({ name: 'Objeto concorrente', categoryId: category.id }, userIds[0]);
   const results = await Promise.allSettled([
     createTask({ ...valid, objectId: raceObject.id }, userIds[0]),
@@ -232,6 +247,7 @@ try {
   if (server) await new Promise(resolve => server.close(resolve));
   await closeDatabase();
 }
+
 
 
 
