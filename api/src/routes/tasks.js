@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/require-auth.js';
-import { createTask, listTasks, getTask, completeTask, updateTask, deleteTask } from '../services/tasks.js';
+import { createTask, listTasks, listReminders, getTask, completeTask, updateTask, deleteTask } from '../services/tasks.js';
 
 const router = Router();
 router.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
@@ -12,6 +12,9 @@ router.post('/', async (req, res) => {
 });
 router.get('/', async (req, res) => {
   res.status(200).json(await listTasks(req.auth.user._id, req.query));
+});
+router.get('/reminders', async (req, res) => {
+  res.status(200).json(await listReminders(req.auth.user, req.query));
 });
 router.get('/:id', async (req, res) => {
   res.status(200).json({ task: await getTask(req.params.id, req.auth.user._id) });
@@ -29,5 +32,6 @@ router.delete('/:id', async (req, res) => {
   res.status(204).end();
 });
 export default router;
+
 
 

@@ -64,11 +64,8 @@ export function buildTaskFilter(userId, { objectId, status, dueFrom, dueTo }, no
   return filter;
 }
 
-export async function listTasks(userId, query = {}) {
-  const { objectId, status, dueFrom, dueTo, ...pagination } = query;
-  const { page, pageSize } = parseTaskPagination(pagination);
+async function readTaskPage(filter, { page, pageSize }) {
   const collection = getDatabase().collection('tasks');
-  const filter = buildTaskFilter(userId, { objectId, status, dueFrom, dueTo });
   const [tasks, total] = await Promise.all([
     collection.find(filter).sort({ dueOn: 1, _id: 1 }).skip((page - 1) * pageSize).limit(pageSize).toArray(),
     collection.countDocuments(filter)
@@ -76,6 +73,21 @@ export async function listTasks(userId, query = {}) {
   return { tasks: tasks.map(toPublicTask), page, pageSize, total };
 }
 
+export async function listTasks(userId, query = {}) {
+  const { objectId, status, dueFrom, dueTo, ...pagination } = query;
+  const page = parseTaskPagination(pagination);
+  return readTaskPage(buildTaskFilter(userId, { objectId, status, dueFrom, dueTo }), page);
+}
+
+export async function listReminders(user, query) {
+  const page = parseTaskPagination(query);
+  if (user.preferences?.remindersEnabled !== true) {
+    return { tasks: [], ...page, total: 0 };
+  }
+
+  const upcoming = buildTaskFilter(user._id, { status: 'pending' });
+  return readTaskPage({ ...upcoming, reminderEnabled: true }, page);
+}
 export async function getTask(id, userId) {
   const task = await getDatabase().collection('tasks').findOne({ _id: parseTaskId(id), userId });
   if (!task) throw Object.assign(new Error('Cuidado não encontrado.'), { status: 404 });
@@ -186,6 +198,7 @@ export async function deleteTask(id, userId) {
   const result = await collection.deleteOne({ ...filter, status: 'pending' });
   if (!result.deletedCount) await rejectPendingChange(collection, filter);
 }
+
 
 
 

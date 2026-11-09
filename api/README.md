@@ -692,3 +692,9 @@ da conta e continuam válidas. O próximo login usa o endereço novo.
 
 Decisão da primeira versão: basta a palavra-passe atual. Reavaliar a confirmação
 da posse do novo endereço por email numa versão futura.
+
+GET /tasks/reminders exige sessão e aceita page e pageSize. Devolve tasks,
+page, pageSize e total. Inclui apenas cuidados da conta com reminderEnabled
+ativo, pendentes e previstos para hoje ou depois no calendário de Lisboa.
+Quando a preferência geral de lembretes está desligada, a lista vem vazia.
+O cliente pode usar esta consulta como entrada para o agendamento local.

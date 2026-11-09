@@ -181,6 +181,19 @@ try {
   assert.equal(successors[0].notes, '');
   assert.equal(successors[0].repeatEveryDays, 30);
   assert.equal(successors[0].reminderEnabled, true);
+  assert.equal((await fetch(base + '/reminders')).status, 401);
+  const remindersOff = await request(0, 'GET', '/reminders');
+  assert.equal(remindersOff.status, 200);
+  assert.equal((await remindersOff.json()).total, 0);
+  await database.collection('users').updateOne({ _id: userIds[0] }, { $set: { 'preferences.remindersEnabled': true } });
+  await database.collection('tasks').updateOne({ _id: new ObjectId(overdue.id) }, { $set: { reminderEnabled: true } });
+  await createTask({ ...valid, objectId: otherObject.id, dueOn: '2099-01-01', reminderEnabled: true }, userIds[1]);
+  const remindersOn = await request(0, 'GET', '/reminders?pageSize=1');
+  assert.equal(remindersOn.status, 200);
+  const reminderPage = await remindersOn.json();
+  assert.equal(reminderPage.total, 1);
+  assert.deepEqual(reminderPage.tasks.map(task => task.id), [successors[0]._id.toString()]);
+  assert.equal((await request(0, 'GET', '/reminders?pageSize=0')).status, 400);
   const successorPath = '/' + successors[0]._id;
   const disabled = await request(0, 'PATCH', successorPath, { repeatEveryDays: null });
   assert.equal(disabled.status, 200);
@@ -219,6 +232,7 @@ try {
   if (server) await new Promise(resolve => server.close(resolve));
   await closeDatabase();
 }
+
 
 
 
