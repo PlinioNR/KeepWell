@@ -20,8 +20,8 @@ export function validateTaskDate(dueOn) {
 
 export function buildTask(body, userId) {
   if (!body || typeof body !== 'object' || Array.isArray(body) ||
-      Object.keys(body).some(key => !['objectId', 'title', 'dueOn'].includes(key))) {
-    throw Object.assign(new Error('Envia apenas objectId, title e dueOn.'), { status: 400 });
+      Object.keys(body).some(key => !['objectId', 'title', 'dueOn', 'repeatEveryDays'].includes(key))) {
+    throw Object.assign(new Error('Envia apenas objectId, title, dueOn e repeatEveryDays.'), { status: 400 });
   }
   if (typeof body.objectId !== 'string' || !/^[a-f0-9]{24}$/i.test(body.objectId)) {
     throw Object.assign(new Error('Seleciona um objeto válido.'), { status: 400 });
@@ -34,16 +34,21 @@ export function buildTask(body, userId) {
     throw Object.assign(new Error('O título deve ter entre 2 e 120 caracteres.'), { status: 400 });
   }
   const dueOn = validateTaskDate(body.dueOn);
+  const repeatEveryDays = body.repeatEveryDays ?? null;
+  if (repeatEveryDays !== null &&
+      (!Number.isInteger(repeatEveryDays) || repeatEveryDays < 1 || repeatEveryDays > 365)) {
+    throw Object.assign(new Error('A repetição deve ser null ou um número inteiro de 1 a 365 dias.'), { status: 400 });
+  }
   if (!(userId instanceof ObjectId)) throw new Error('Utilizador autenticado inválido.');
   const now = new Date();
   // Estado e datas internas são definidos pelo servidor, não pelo cliente.
-  return { objectId: new ObjectId(body.objectId), userId, title, dueOn,
+  return { objectId: new ObjectId(body.objectId), userId, title, dueOn, repeatEveryDays,
     status: 'pending', completedAt: null, notes: '', createdAt: now, updatedAt: now };
 }
 
 export function toPublicTask(task) {
   return { id: task._id.toString(), objectId: task.objectId.toString(), title: task.title,
-    dueOn: task.dueOn, status: task.status, completedAt: task.completedAt, notes: task.notes ?? '',
+    dueOn: task.dueOn, repeatEveryDays: task.repeatEveryDays ?? null, status: task.status, completedAt: task.completedAt, notes: task.notes ?? '',
     createdAt: task.createdAt, updatedAt: task.updatedAt };
 }
 
@@ -56,6 +61,7 @@ export async function setupTasks(database) {
         _id: { bsonType: 'objectId' }, objectId: { bsonType: 'objectId' }, userId: { bsonType: 'objectId' },
         title: { bsonType: 'string', minLength: 2, maxLength: 120, pattern: '^\\S(?:[\\s\\S]*\\S)$' },
         dueOn: { bsonType: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
+        repeatEveryDays: { bsonType: ['int', 'null'], minimum: 1, maximum: 365 },
         notes: { bsonType: 'string', maxLength: 1000 },
         status: { enum: ['pending', 'completed'] }, completedAt: { bsonType: ['date', 'null'] },
         createdAt: { bsonType: 'date' }, updatedAt: { bsonType: 'date' }
@@ -77,5 +83,6 @@ export async function setupTasks(database) {
   await database.collection('tasks').createIndex({ objectId: 1 }, { name: 'tasks_object' });
   await database.collection('tasks').createIndex({ userId: 1, objectId: 1, status: 1, completedAt: -1, _id: -1 }, { name: 'tasks_object_history' });
 }
+
 
 

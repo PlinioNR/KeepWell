@@ -162,6 +162,31 @@ try {
   const afterDelete = await fetch(`${objectsUrl}/${object.id}`, auth(0));
   assert.equal((await afterDelete.json()).object.nextCare, null);
   assert.equal((await request(0, 'GET', `/${editable.id}`)).status, 404);
+  const recurring = await createTask({ ...valid, title: 'Limpar mensalmente', repeatEveryDays: 30 }, userIds[0]);
+  assert.equal((await request(0, 'POST', '', { ...valid, repeatEveryDays: 0 })).status, 400);
+  const recurringResponses = await Promise.all([0, 1].map(() =>
+    request(0, 'POST', '/' + recurring.id + '/complete', { notes: 'Feito' })
+  ));
+  assert.ok(recurringResponses.every(response => response.status === 200));
+  const successors = await database.collection('tasks').find({
+    objectId: new ObjectId(object.id), title: recurring.title, status: 'pending'
+  }).toArray();
+  assert.equal(successors.length, 1);
+  const completion = (await recurringResponses[0].json()).task;
+  const day = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Lisbon' }).format(new Date(completion.completedAt));
+  const expectedDate = new Date(day + 'T00:00:00Z');
+  expectedDate.setUTCDate(expectedDate.getUTCDate() + 30);
+  assert.equal(successors[0].dueOn, expectedDate.toISOString().slice(0, 10));
+  assert.equal(successors[0].notes, '');
+  assert.equal(successors[0].repeatEveryDays, 30);
+  const successorPath = '/' + successors[0]._id;
+  const disabled = await request(0, 'PATCH', successorPath, { repeatEveryDays: null });
+  assert.equal(disabled.status, 200);
+  assert.equal((await disabled.json()).task.repeatEveryDays, null);
+  assert.equal((await request(0, 'POST', successorPath + '/complete', {})).status, 200);
+  assert.equal(await database.collection('tasks').countDocuments({
+    objectId: new ObjectId(object.id), title: recurring.title, status: 'pending'
+  }), 0);
   const raceObject = await createObject({ name: 'Objeto concorrente', categoryId: category.id }, userIds[0]);
   const results = await Promise.allSettled([
     createTask({ ...valid, objectId: raceObject.id }, userIds[0]),
@@ -186,6 +211,8 @@ try {
   if (server) await new Promise(resolve => server.close(resolve));
   await closeDatabase();
 }
+
+
 
 
 

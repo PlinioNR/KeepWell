@@ -31,6 +31,12 @@ export function parseTaskPagination(query = {}) {
   return { page: parse(query.page, 1, 1000000), pageSize: parse(query.pageSize, 20, 100) };
 }
 
+function lisbonDate(now) {
+  return new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Europe/Lisbon', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(now);
+}
+
 export function buildTaskFilter(userId, { objectId, status, dueFrom, dueTo }, now = new Date()) {
   const filter = { userId };
   if (objectId !== undefined) filter.objectId = parseObjectId(objectId);
@@ -47,10 +53,7 @@ export function buildTaskFilter(userId, { objectId, status, dueFrom, dueTo }, no
   }
   if (status === 'completed') return { ...filter, status };
 
-  // A data de referência segue o calendário de Lisboa.
-  const today = new Intl.DateTimeFormat('sv-SE', {
-    timeZone: 'Europe/Lisbon', year: 'numeric', month: '2-digit', day: '2-digit'
-  }).format(now);
+  const today = lisbonDate(now);
   filter.status = 'pending';
   if (status === 'overdue') {
     range.$lt = today;
@@ -94,21 +97,36 @@ export function validateCompletion(body = {}) {
 export async function completeTask(id, body, userId) {
   const _id = parseTaskId(id);
   const notes = validateCompletion(body);
-  const collection = getDatabase().collection('tasks');
   const now = new Date();
-  // Só a primeira conclusão altera o documento. Data e observações são guardadas juntas.
-  const updated = await collection.findOneAndUpdate(
-    { _id, userId, status: 'pending' },
-    { $set: { status: 'completed', completedAt: now, notes, updatedAt: now } },
-    { returnDocument: 'after' }
-  );
-  if (updated) return toPublicTask(updated);
-  const current = await collection.findOne({ _id, userId });
-  if (!current) throw Object.assign(new Error('Cuidado não encontrado.'), { status: 404 });
-  // Repetir o pedido é seguro: não substitui a data nem as observações originais.
-  return toPublicTask(current);
-}
 
+  return withDatabaseTransaction(async (database, session) => {
+    const collection = database.collection('tasks');
+    const completed = await collection.findOneAndUpdate(
+      { _id, userId, status: 'pending' },
+      { $set: { status: 'completed', completedAt: now, notes, updatedAt: now } },
+      { session, returnDocument: 'after' }
+    );
+    if (!completed) {
+      const current = await collection.findOne({ _id, userId }, { session });
+      if (!current) throw Object.assign(new Error('Cuidado não encontrado.'), { status: 404 });
+      return toPublicTask(current);
+    }
+    if (completed.repeatEveryDays) {
+      // Soma dias à data de calendário em Lisboa sem efeitos da mudança de hora.
+      const nextDate = new Date(lisbonDate(now) + 'T00:00:00.000Z');
+      nextDate.setUTCDate(nextDate.getUTCDate() + completed.repeatEveryDays);
+      const next = buildTask({
+        objectId: completed.objectId.toString(),
+        title: completed.title,
+        dueOn: nextDate.toISOString().slice(0, 10),
+        repeatEveryDays: completed.repeatEveryDays
+      }, userId);
+      // A conclusão e o novo cuidado são confirmados juntos.
+      await collection.insertOne(next, { session });
+    }
+    return toPublicTask(completed);
+  });
+}
 export async function listObjectHistory(id, userId, query) {
   const { page, pageSize } = parseTaskPagination(query);
   const objectId = parseObjectId(id);
@@ -134,8 +152,8 @@ async function rejectPendingChange(collection, filter) {
 
 export async function updateTask(id, body, userId) {
   if (!body || typeof body !== 'object' || Array.isArray(body) ||
-      !Object.keys(body).length || Object.keys(body).some(key => !['title', 'dueOn'].includes(key))) {
-    throw Object.assign(new Error('Envia title e/ou dueOn.'), { status: 400 });
+      !Object.keys(body).length || Object.keys(body).some(key => !['title', 'dueOn', 'repeatEveryDays'].includes(key))) {
+    throw Object.assign(new Error('Envia title, dueOn e/ou repeatEveryDays.'), { status: 400 });
   }
   const filter = { _id: parseTaskId(id), userId };
   const collection = getDatabase().collection('tasks');
@@ -144,12 +162,14 @@ export async function updateTask(id, body, userId) {
   const validated = buildTask({
     objectId: current.objectId.toString(),
     title: Object.hasOwn(body, 'title') ? body.title : current.title,
-    dueOn: Object.hasOwn(body, 'dueOn') ? body.dueOn : current.dueOn
+    dueOn: Object.hasOwn(body, 'dueOn') ? body.dueOn : current.dueOn,
+    repeatEveryDays: body.repeatEveryDays
   }, userId);
   // Grava só os campos enviados para preservar alterações simultâneas noutros campos.
   const changes = { updatedAt: validated.updatedAt };
   if (Object.hasOwn(body, 'title')) changes.title = validated.title;
   if (Object.hasOwn(body, 'dueOn')) changes.dueOn = validated.dueOn;
+  if (Object.hasOwn(body, 'repeatEveryDays')) changes.repeatEveryDays = validated.repeatEveryDays;
   const updated = await collection.findOneAndUpdate(
     { ...filter, status: 'pending' }, { $set: changes }, { returnDocument: 'after' }
   );
@@ -163,4 +183,5 @@ export async function deleteTask(id, userId) {
   const result = await collection.deleteOne({ ...filter, status: 'pending' });
   if (!result.deletedCount) await rejectPendingChange(collection, filter);
 }
+
 
