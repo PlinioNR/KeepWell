@@ -26,12 +26,17 @@ export const userValidator = {
   }
 };
 
-// Recebe um hash já calculado pelo serviço de registo/autenticação, não a palavra-passe.
-// Apenas escolhemos os campos permitidos: nunca copiamos todo o pedido do cliente.
-export function buildUser({ name, email, passwordHash } = {}) {
+export function normalizeUserName(name) {
   if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 100) {
     throw new Error('O nome deve ter entre 2 e 100 caracteres.');
   }
+  return name.trim();
+}
+
+// Recebe um hash já calculado pelo serviço de registo/autenticação, não a palavra-passe.
+// Apenas escolhemos os campos permitidos: nunca copiamos todo o pedido do cliente.
+export function buildUser({ name, email, passwordHash } = {}) {
+  const normalizedName = normalizeUserName(name);
   if (typeof email !== 'string') throw new Error('Indica um email válido.');
   const normalizedEmail = email.trim().toLowerCase();
   // Verificação de formato básica; não confirma que a caixa de correio existe.
@@ -44,7 +49,7 @@ export function buildUser({ name, email, passwordHash } = {}) {
 
   const now = new Date();
   return {
-    name: name.trim(), email: normalizedEmail, passwordHash,
+    name: normalizedName, email: normalizedEmail, passwordHash,
     role: 'user', createdAt: now, updatedAt: now
   };
 }
@@ -82,5 +87,6 @@ export async function setupUsers(database) {
     collation: { locale: 'en', strength: 2 }
   });
 }
+
 
 

@@ -678,3 +678,7 @@ A próxima ocorrência de um cuidado recorrente herda a preferência.
 O Flutter pode agendar um lembrete local quando user.preferences.remindersEnabled
 e task.reminderEnabled forem true e o cuidado estiver pendente.
 Executa npm.cmd run db:setup para atualizar a validação.
+
+PATCH /auth/me recebe apenas name e devolve user. Exige sessão da própria conta
+e aplica a mesma regra do registo: 2 a 100 caracteres após remover espaços das
+extremidades. GET /auth/me devolve o nome atualizado.

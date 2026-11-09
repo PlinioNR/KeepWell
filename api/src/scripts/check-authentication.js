@@ -79,6 +79,24 @@ try {
   assert.equal(response.status, 200);
   const second = await response.json();
   assert.notEqual(second.token, login.token);
+  const profileUrl = base + '/auth/me';
+  const patchName = (body, token) => fetch(profileUrl, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...(token ? authorized(token).headers : {}) },
+    body: JSON.stringify(body)
+  });
+  assert.equal((await patchName({ name: 'Outro nome' })).status, 401);
+  assert.equal((await patchName({ name: 'X' }, second.token)).status, 400);
+  assert.equal((await patchName({ name: 'Outro nome', role: 'admin' }, second.token)).status, 400);
+  const profileEdit = await patchName({ name: '  Novo nome  ' }, second.token);
+  assert.equal(profileEdit.status, 200);
+  const editedProfile = (await profileEdit.json()).user;
+  assert.equal(editedProfile.name, 'Novo nome');
+  assert.equal(editedProfile.email, second.user.email);
+  assert.deepEqual(editedProfile.preferences, second.user.preferences);
+  assert.equal('passwordHash' in editedProfile, false);
+  const profileRead = await fetch(profileUrl, authorized(second.token));
+  assert.equal((await profileRead.json()).user.name, 'Novo nome');
   assert.deepEqual(second.user.preferences, { theme: 'dark', remindersEnabled: true });
   response = await fetch(`${base}/auth/logout`, { method: 'POST', ...authorized(second.token) });
   assert.equal(response.status, 204);
@@ -105,4 +123,5 @@ try {
   if (server) await new Promise((resolve) => server.close(resolve));
   await closeDatabase();
 }
+
 
