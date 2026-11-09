@@ -649,3 +649,9 @@ PATCH /tips/:id aceita alterações parciais a esses campos. DELETE /tips/:id de
 eliminação devolve 409 enquanto houver dicas associadas.
 
 Executa npm.cmd run db:setup para preparar a coleção tips.
+
+GET /tasks aceita dueFrom e dueTo em AAAA-MM-DD. Cada limite é opcional e inclusivo.
+Os limites combinam com status, objectId e paginação. O total conta os cuidados que
+correspondem a todos os filtros antes da paginação. Datas inválidas ou invertidas
+devolvem 400. Para os próximos cuidados da semana, usa status=pending e dueTo com
+a data de domingo.

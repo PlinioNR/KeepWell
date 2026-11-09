@@ -137,6 +137,20 @@ try {
   }
   assert.equal((await (await request(0, 'GET', '?status=completed')).json()).total, 2);
   assert.equal((await request(0, 'GET', '?status=pending&status=overdue')).status, 400);
+  const exact = await request(0, 'GET', '?status=pending&dueFrom=2099-01-01&dueTo=2099-01-01');
+  assert.equal(exact.status, 200);
+  assert.deepEqual((await exact.json()).tasks.map(task => task.id), [editable.id]);
+  for (const query of [
+    '?status=pending&dueTo=2000-01-01',
+    '?status=overdue&dueFrom=2099-01-01',
+    '?status=pending&dueFrom=2099-01-02'
+  ]) {
+    const filtered = await request(0, 'GET', query);
+    assert.equal(filtered.status, 200);
+    assert.equal((await filtered.json()).total, 0);
+  }
+  assert.equal((await request(0, 'GET', '?dueFrom=2026-02-30')).status, 400);
+  assert.equal((await request(0, 'GET', '?dueFrom=2026-12-01&dueTo=2026-11-01')).status, 400);
   assert.equal((await request(0, 'DELETE', `/${editable.id}`)).status, 204);
   assert.equal((await request(0, 'GET', `/${editable.id}`)).status, 404);
   const raceObject = await createObject({ name: 'Objeto concorrente', categoryId: category.id }, userIds[0]);
@@ -163,5 +177,6 @@ try {
   if (server) await new Promise(resolve => server.close(resolve));
   await closeDatabase();
 }
+
 
 

@@ -1,6 +1,6 @@
 import { parseObjectId } from '../models/object.js';
 import { getDatabase, withDatabaseTransaction } from '../database.js';
-import { buildTask, parseTaskId, toPublicTask } from '../models/task.js';
+import { buildTask, parseTaskId, toPublicTask, validateTaskDate } from '../models/task.js';
 
 export async function createTask(body, userId) {
   const task = buildTask(body, userId);
@@ -31,9 +31,16 @@ export function parseTaskPagination(query = {}) {
   return { page: parse(query.page, 1, 1000000), pageSize: parse(query.pageSize, 20, 100) };
 }
 
-export function buildTaskFilter(userId, { objectId, status }, now = new Date()) {
+export function buildTaskFilter(userId, { objectId, status, dueFrom, dueTo }, now = new Date()) {
   const filter = { userId };
   if (objectId !== undefined) filter.objectId = parseObjectId(objectId);
+  const range = {};
+  if (dueFrom !== undefined) range.$gte = validateTaskDate(dueFrom);
+  if (dueTo !== undefined) range.$lte = validateTaskDate(dueTo);
+  if (dueFrom !== undefined && dueTo !== undefined && dueFrom > dueTo) {
+    throw Object.assign(new Error('A data inicial deve ser anterior ou igual à data final.'), { status: 400 });
+  }
+  if (Object.keys(range).length) filter.dueOn = range;
   if (status === undefined) return filter;
   if (!['pending', 'overdue', 'completed'].includes(status)) {
     throw Object.assign(new Error('Usa pending, overdue ou completed.'), { status: 400 });
@@ -44,14 +51,21 @@ export function buildTaskFilter(userId, { objectId, status }, now = new Date()) 
   const today = new Intl.DateTimeFormat('sv-SE', {
     timeZone: 'Europe/Lisbon', year: 'numeric', month: '2-digit', day: '2-digit'
   }).format(now);
-  return { ...filter, status: 'pending', dueOn: status === 'overdue' ? { $lt: today } : { $gte: today } };
+  filter.status = 'pending';
+  if (status === 'overdue') {
+    range.$lt = today;
+  } else if (dueFrom === undefined || dueFrom < today) {
+    range.$gte = today;
+  }
+  filter.dueOn = range;
+  return filter;
 }
 
 export async function listTasks(userId, query = {}) {
-  const { objectId, status, ...pagination } = query;
+  const { objectId, status, dueFrom, dueTo, ...pagination } = query;
   const { page, pageSize } = parseTaskPagination(pagination);
   const collection = getDatabase().collection('tasks');
-  const filter = buildTaskFilter(userId, { objectId, status });
+  const filter = buildTaskFilter(userId, { objectId, status, dueFrom, dueTo });
   const [tasks, total] = await Promise.all([
     collection.find(filter).sort({ dueOn: 1, _id: 1 }).skip((page - 1) * pageSize).limit(pageSize).toArray(),
     collection.countDocuments(filter)
@@ -149,3 +163,4 @@ export async function deleteTask(id, userId) {
   const result = await collection.deleteOne({ ...filter, status: 'pending' });
   if (!result.deletedCount) await rejectPendingChange(collection, filter);
 }
+
