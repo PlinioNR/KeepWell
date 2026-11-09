@@ -682,3 +682,13 @@ Executa npm.cmd run db:setup para atualizar a validação.
 PATCH /auth/me recebe apenas name e devolve user. Exige sessão da própria conta
 e aplica a mesma regra do registo: 2 a 100 caracteres após remover espaços das
 extremidades. GET /auth/me devolve o nome atualizado.
+
+PATCH /auth/me/email recebe email (novo endereço) e password (palavra-passe atual).
+Exige sessão, normaliza o endereço como no login e devolve 200 com user.
+Uma palavra-passe errada devolve 401, dados inválidos devolvem 400 e um email
+ocupado devolve 409. O índice único também protege contra alterações simultâneas.
+Há um limite de 10 pedidos por IP em 15 minutos. As sessões são ligadas ao ID
+da conta e continuam válidas. O próximo login usa o endereço novo.
+
+Decisão da primeira versão: basta a palavra-passe atual. Reavaliar a confirmação
+da posse do novo endereço por email numa versão futura.

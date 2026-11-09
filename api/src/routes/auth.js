@@ -1,4 +1,4 @@
-import { updateProfile } from '../services/profile.js';
+import { updateEmail, updateProfile } from '../services/profile.js';
 import { updatePreferences } from '../services/preferences.js';
 import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
@@ -48,6 +48,17 @@ router.patch('/me', requireAuth, async (req, res) => {
   res.status(200).json({ user });
 });
 
+const emailChangeLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, limit: 10,
+  standardHeaders: 'draft-8', legacyHeaders: false,
+  message: { error: 'Demasiadas tentativas de alteração de email. Tenta novamente dentro de 15 minutos.' }
+});
+
+router.patch('/me/email', requireAuth, emailChangeLimit, async (req, res) => {
+  if (!req.is('application/json')) return res.status(415).json({ error: 'Usa Content-Type: application/json.' });
+  res.status(200).json({ user: await updateEmail(req.auth.user, req.body) });
+});
+
 router.patch('/me/preferences', requireAuth, async (req, res) => {
   if (!req.is('application/json')) return res.status(415).json({ error: 'Usa Content-Type: application/json.' });
   const user = await updatePreferences(req.auth.user._id, req.body);
@@ -60,5 +71,6 @@ router.post('/logout', requireAuth, async (req, res) => {
 });
 
 export default router;
+
 
 

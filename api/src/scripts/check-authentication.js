@@ -6,6 +6,8 @@ import { hashSessionToken } from '../services/authentication.js';
 
 // Usa uma conta exclusiva deste teste; não altera contas reais.
 const email = `keepwell-login-test-${randomUUID()}@example.com`;
+const newEmail = 'novo-' + email;
+const occupiedEmail = 'ocupado-' + email;
 const password = 'TesteLogin123!';
 let server;
 let database;
@@ -98,11 +100,33 @@ try {
   const profileRead = await fetch(profileUrl, authorized(second.token));
   assert.equal((await profileRead.json()).user.name, 'Novo nome');
   assert.deepEqual(second.user.preferences, { theme: 'dark', remindersEnabled: true });
+  assert.equal((await post('/auth/register', { name: 'Email ocupado', email: occupiedEmail, password })).status, 201);
+  const patchEmail = (body, token) => fetch(base + '/auth/me/email', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...(token ? authorized(token).headers : {}) },
+    body: JSON.stringify(body)
+  });
+  assert.equal((await patchEmail({ email: newEmail, password })).status, 401);
+  assert.equal((await patchEmail({ email: newEmail, password: 'Incorreta!' }, second.token)).status, 401);
+  assert.equal((await patchEmail({ email: 'inválido', password }, second.token)).status, 400);
+  assert.equal((await patchEmail({ email: occupiedEmail, password }, second.token)).status, 409);
+  assert.equal((await (await fetch(profileUrl, authorized(second.token))).json()).user.email, email);
+  const changed = await patchEmail({ email: ' ' + newEmail.toUpperCase() + ' ', password }, second.token);
+  assert.equal(changed.status, 200);
+  const changedUser = (await changed.json()).user;
+  assert.equal(changedUser.email, newEmail);
+  assert.equal(changedUser.id, second.user.id);
+  assert.equal('passwordHash' in changedUser, false);
   response = await fetch(`${base}/auth/logout`, { method: 'POST', ...authorized(second.token) });
   assert.equal(response.status, 204);
   response = await fetch(`${base}/auth/me`, authorized(second.token));
   assert.equal(response.status, 401);
   assert.equal(await database.collection('sessions').countDocuments({ tokenHash: hashSessionToken(second.token) }), 0);
+
+  assert.equal((await post('/auth/login', { email, password })).status, 401);
+  const newLogin = await post('/auth/login', { email: newEmail, password });
+  assert.equal(newLogin.status, 200);
+  assert.equal((await newLogin.json()).user.email, newEmail);
 
   // Os pedidos inválidos contam para o limite, sem gerar mais hashes ou sessões.
   for (let i = 0; i < 21; i += 1) response = await post('/auth/login', {});
@@ -110,18 +134,20 @@ try {
   console.log('Login verificado: credenciais, privacidade, sessão, expiração, logout e limite de tentativas.');
 } finally {
   if (database) {
-    const ownUser = userId ? { _id: userId, email } : { email };
+    const ownUser = userId ? { _id: userId } : { email };
     const user = await database.collection('users').findOne(ownUser);
     if (user) {
       await database.collection('sessions').deleteMany({ userId: user._id });
-      await database.collection('users').deleteOne({ _id: user._id, email });
+      await database.collection('users').deleteOne({ _id: user._id });
     }
-    assert.equal(await database.collection('users').countDocuments({ email }), 0);
+    await database.collection('users').deleteOne({ email: occupiedEmail });
+    assert.equal(await database.collection('users').countDocuments({ email: { $in: [email, newEmail, occupiedEmail] } }), 0);
     if (userId) assert.equal(await database.collection('sessions').countDocuments({ userId }), 0);
     console.log('Conta e sessões temporárias deste teste eliminadas.');
   }
   if (server) await new Promise((resolve) => server.close(resolve));
   await closeDatabase();
 }
+
 
 
