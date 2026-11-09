@@ -636,3 +636,16 @@ dicas e integração dos cuidados com o Flutter. Nenhum lembrete é agendado por
   pending inclui cuidados previstos para hoje ou depois, overdue inclui pendentes
   com data anterior a hoje, completed inclui concluídos. Hoje segue Europe/Lisbon.
   Omitir status lista todos. Atraso é calculado na consulta, sem alterar o estado guardado.
+
+### Dicas de conservação
+
+GET /tips aceita categoryId, search (parte literal do título), page e pageSize.
+Devolve tips, page, pageSize e total. GET /tips/:id devolve tip.
+Ambas as consultas exigem sessão.
+
+POST /tips recebe title (2–120 caracteres), text (1–3000 caracteres) e categoryId.
+PATCH /tips/:id aceita alterações parciais a esses campos. DELETE /tips/:id devolve
+204. As três operações exigem administrador. A categoria tem de existir e a sua
+eliminação devolve 409 enquanto houver dicas associadas.
+
+Executa npm.cmd run db:setup para preparar a coleção tips.
