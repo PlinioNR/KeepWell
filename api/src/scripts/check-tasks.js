@@ -45,6 +45,7 @@ try {
   assert.equal(response.status, 201, JSON.stringify(created));
   assert.equal(response.headers.get('location'), `/tasks/${created.task.id}`);
   assert.equal(created.task.status, 'pending');
+  assert.equal(created.task.reminderEnabled, false);
   assert.equal(created.task.completedAt, null);
   assert.ok(!('userId' in created.task));
   const saved = await database.collection('tasks').findOne({ _id: new ObjectId(created.task.id) });
@@ -162,7 +163,7 @@ try {
   const afterDelete = await fetch(`${objectsUrl}/${object.id}`, auth(0));
   assert.equal((await afterDelete.json()).object.nextCare, null);
   assert.equal((await request(0, 'GET', `/${editable.id}`)).status, 404);
-  const recurring = await createTask({ ...valid, title: 'Limpar mensalmente', repeatEveryDays: 30 }, userIds[0]);
+  const recurring = await createTask({ ...valid, title: 'Limpar mensalmente', repeatEveryDays: 30, reminderEnabled: true }, userIds[0]);
   assert.equal((await request(0, 'POST', '', { ...valid, repeatEveryDays: 0 })).status, 400);
   const recurringResponses = await Promise.all([0, 1].map(() =>
     request(0, 'POST', '/' + recurring.id + '/complete', { notes: 'Feito' })
@@ -179,10 +180,17 @@ try {
   assert.equal(successors[0].dueOn, expectedDate.toISOString().slice(0, 10));
   assert.equal(successors[0].notes, '');
   assert.equal(successors[0].repeatEveryDays, 30);
+  assert.equal(successors[0].reminderEnabled, true);
   const successorPath = '/' + successors[0]._id;
   const disabled = await request(0, 'PATCH', successorPath, { repeatEveryDays: null });
   assert.equal(disabled.status, 200);
-  assert.equal((await disabled.json()).task.repeatEveryDays, null);
+  const disabledTask = (await disabled.json()).task;
+  assert.equal(disabledTask.repeatEveryDays, null);
+  assert.equal(disabledTask.reminderEnabled, true);
+  assert.equal((await request(0, 'PATCH', successorPath, { reminderEnabled: 'false' })).status, 400);
+  const withoutReminder = await request(0, 'PATCH', successorPath, { reminderEnabled: false });
+  assert.equal(withoutReminder.status, 200);
+  assert.equal((await withoutReminder.json()).task.reminderEnabled, false);
   assert.equal((await request(0, 'POST', successorPath + '/complete', {})).status, 200);
   assert.equal(await database.collection('tasks').countDocuments({
     objectId: new ObjectId(object.id), title: recurring.title, status: 'pending'
@@ -211,6 +219,7 @@ try {
   if (server) await new Promise(resolve => server.close(resolve));
   await closeDatabase();
 }
+
 
 
 

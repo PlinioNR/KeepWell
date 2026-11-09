@@ -671,3 +671,10 @@ remindersEnabled (booleano), exige sessão e devolve user. GET /auth/me e o
 login incluem user.preferences. Os valores por defeito são system e false.
 A preferência de lembretes pode ser lida pela app para configurar notificações.
 Executa npm.cmd run db:setup para atualizar a validação no Atlas.
+
+POST /tasks e PATCH /tasks/:id aceitam reminderEnabled (true ou false).
+O valor por defeito é false. Omitir o campo no PATCH preserva a escolha.
+A próxima ocorrência de um cuidado recorrente herda a preferência.
+O Flutter pode agendar um lembrete local quando user.preferences.remindersEnabled
+e task.reminderEnabled forem true e o cuidado estiver pendente.
+Executa npm.cmd run db:setup para atualizar a validação.

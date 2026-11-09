@@ -119,7 +119,8 @@ export async function completeTask(id, body, userId) {
         objectId: completed.objectId.toString(),
         title: completed.title,
         dueOn: nextDate.toISOString().slice(0, 10),
-        repeatEveryDays: completed.repeatEveryDays
+        repeatEveryDays: completed.repeatEveryDays,
+        reminderEnabled: completed.reminderEnabled
       }, userId);
       // A conclusão e o novo cuidado são confirmados juntos.
       await collection.insertOne(next, { session });
@@ -152,8 +153,8 @@ async function rejectPendingChange(collection, filter) {
 
 export async function updateTask(id, body, userId) {
   if (!body || typeof body !== 'object' || Array.isArray(body) ||
-      !Object.keys(body).length || Object.keys(body).some(key => !['title', 'dueOn', 'repeatEveryDays'].includes(key))) {
-    throw Object.assign(new Error('Envia title, dueOn e/ou repeatEveryDays.'), { status: 400 });
+      !Object.keys(body).length || Object.keys(body).some(key => !['title', 'dueOn', 'repeatEveryDays', 'reminderEnabled'].includes(key))) {
+    throw Object.assign(new Error('Envia title, dueOn, repeatEveryDays e/ou reminderEnabled.'), { status: 400 });
   }
   const filter = { _id: parseTaskId(id), userId };
   const collection = getDatabase().collection('tasks');
@@ -163,13 +164,15 @@ export async function updateTask(id, body, userId) {
     objectId: current.objectId.toString(),
     title: Object.hasOwn(body, 'title') ? body.title : current.title,
     dueOn: Object.hasOwn(body, 'dueOn') ? body.dueOn : current.dueOn,
-    repeatEveryDays: body.repeatEveryDays
+    repeatEveryDays: body.repeatEveryDays,
+    reminderEnabled: body.reminderEnabled
   }, userId);
   // Grava só os campos enviados para preservar alterações simultâneas noutros campos.
   const changes = { updatedAt: validated.updatedAt };
   if (Object.hasOwn(body, 'title')) changes.title = validated.title;
   if (Object.hasOwn(body, 'dueOn')) changes.dueOn = validated.dueOn;
   if (Object.hasOwn(body, 'repeatEveryDays')) changes.repeatEveryDays = validated.repeatEveryDays;
+  if (Object.hasOwn(body, 'reminderEnabled')) changes.reminderEnabled = validated.reminderEnabled;
   const updated = await collection.findOneAndUpdate(
     { ...filter, status: 'pending' }, { $set: changes }, { returnDocument: 'after' }
   );
@@ -183,5 +186,6 @@ export async function deleteTask(id, userId) {
   const result = await collection.deleteOne({ ...filter, status: 'pending' });
   if (!result.deletedCount) await rejectPendingChange(collection, filter);
 }
+
 
 
