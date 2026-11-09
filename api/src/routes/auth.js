@@ -1,3 +1,4 @@
+import { updatePreferences } from '../services/preferences.js';
 import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { registerUser } from '../services/registration.js';
@@ -40,9 +41,16 @@ router.get('/me', requireAuth, (req, res) => {
   res.status(200).json({ user: toPublicUser(req.auth.user) });
 });
 
+router.patch('/me/preferences', requireAuth, async (req, res) => {
+  if (!req.is('application/json')) return res.status(415).json({ error: 'Usa Content-Type: application/json.' });
+  const user = await updatePreferences(req.auth.user._id, req.body);
+  res.status(200).json({ user });
+});
+
 router.post('/logout', requireAuth, async (req, res) => {
   await logoutSession(req.auth.sessionId);
   res.status(204).end();
 });
 
 export default router;
+

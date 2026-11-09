@@ -48,6 +48,21 @@ try {
   assert.equal(response.status, 401);
   response = await fetch(`${base}/auth/me`, authorized('b'.repeat(64)));
   assert.equal(response.status, 401);
+  assert.deepEqual(login.user.preferences, { theme: 'system', remindersEnabled: false });
+  const preferencesUrl = base + '/auth/me/preferences';
+  const patchPreferences = (body, token) => fetch(preferencesUrl, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...(token ? authorized(token).headers : {}) },
+    body: JSON.stringify(body)
+  });
+  assert.equal((await patchPreferences({ theme: 'dark' })).status, 401);
+  assert.equal((await patchPreferences({ role: 'admin' }, login.token)).status, 400);
+  assert.equal((await patchPreferences({ remindersEnabled: 'true' }, login.token)).status, 400);
+  const reminderResult = await patchPreferences({ remindersEnabled: true }, login.token);
+  assert.equal(reminderResult.status, 200);
+  const themeResult = await patchPreferences({ theme: 'dark' }, login.token);
+  assert.equal(themeResult.status, 200);
+  assert.deepEqual((await themeResult.json()).user.preferences, { theme: 'dark', remindersEnabled: true });
   response = await fetch(`${base}/auth/me`, authorized(login.token));
   assert.equal(response.status, 200);
   const profile = await response.json();
@@ -64,6 +79,7 @@ try {
   assert.equal(response.status, 200);
   const second = await response.json();
   assert.notEqual(second.token, login.token);
+  assert.deepEqual(second.user.preferences, { theme: 'dark', remindersEnabled: true });
   response = await fetch(`${base}/auth/logout`, { method: 'POST', ...authorized(second.token) });
   assert.equal(response.status, 204);
   response = await fetch(`${base}/auth/me`, authorized(second.token));
@@ -89,3 +105,4 @@ try {
   if (server) await new Promise((resolve) => server.close(resolve));
   await closeDatabase();
 }
+

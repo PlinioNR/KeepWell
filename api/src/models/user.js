@@ -13,6 +13,13 @@ export const userValidator = {
       },
       passwordHash: { bsonType: 'string', minLength: 1 },
       role: { enum: ['user', 'admin'] },
+      preferences: {
+        bsonType: 'object', additionalProperties: false,
+        properties: {
+          theme: { enum: ['system', 'light', 'dark'] },
+          remindersEnabled: { bsonType: 'bool' }
+        }
+      },
       createdAt: { bsonType: 'date' },
       updatedAt: { bsonType: 'date' }
     }
@@ -46,6 +53,10 @@ export function buildUser({ name, email, passwordHash } = {}) {
 export function toPublicUser(user) {
   return {
     id: user._id.toString(), name: user.name, email: user.email,
+    preferences: {
+      theme: user.preferences?.theme ?? 'system',
+      remindersEnabled: user.preferences?.remindersEnabled ?? false
+    },
     role: user.role, createdAt: user.createdAt, updatedAt: user.updatedAt
   };
 }
@@ -71,4 +82,5 @@ export async function setupUsers(database) {
     collation: { locale: 'en', strength: 2 }
   });
 }
+
 

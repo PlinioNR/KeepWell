@@ -665,3 +665,9 @@ para repetir ou null para desativar. Omitir no PATCH preserva a configuração.
 Ao concluir, a API cria o próximo cuidado a partir do dia da conclusão em Lisboa,
 mantendo objeto, título e intervalo. A conclusão e a criação são atómicas. Repetir
 o pedido de conclusão não cria outro cuidado. Executa db:setup antes de usar.
+
+PATCH /auth/me/preferences aceita theme (system, light ou dark) e/ou
+remindersEnabled (booleano), exige sessão e devolve user. GET /auth/me e o
+login incluem user.preferences. Os valores por defeito são system e false.
+A preferência de lembretes pode ser lida pela app para configurar notificações.
+Executa npm.cmd run db:setup para atualizar a validação no Atlas.
