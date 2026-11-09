@@ -118,6 +118,27 @@ try {
   assert.equal((await emptyHistory.json()).total, 0);
   assert.equal((await fetch(historyUrl + '?pageSize=101', auth(0))).status, 400);
   await assert.rejects(deleteObject(object.id, userIds[0]), { status: 409 });
+  const editable = await createTask({ ...valid, dueOn: '2099-01-01' }, userIds[0]);
+  const overdue = await createTask({ ...valid, dueOn: '2000-01-01' }, userIds[0]);
+  assert.equal((await request(1, 'PATCH', `/${editable.id}`, { title: 'Outro título' })).status, 404);
+  assert.equal((await request(1, 'DELETE', `/${editable.id}`)).status, 404);
+  assert.equal((await request(0, 'PATCH', `/${editable.id}`, { dueOn: '2026-02-30' })).status, 400);
+  const edit = await request(0, 'PATCH', `/${editable.id}`, { title: 'Filtro novo' });
+  assert.equal(edit.status, 200);
+  const edited = (await edit.json()).task;
+  assert.equal(edited.title, 'Filtro novo');
+  assert.equal(edited.dueOn, editable.dueOn);
+  assert.equal((await request(0, 'PATCH', `/${completed.id}`, { title: 'Outro título' })).status, 409);
+  assert.equal((await request(0, 'DELETE', `/${completed.id}`)).status, 409);
+  for (const [status, id] of [['pending', editable.id], ['overdue', overdue.id]]) {
+    const filtered = await request(0, 'GET', `?status=${status}&objectId=${object.id}`);
+    assert.equal(filtered.status, 200);
+    assert.deepEqual((await filtered.json()).tasks.map(task => task.id), [id]);
+  }
+  assert.equal((await (await request(0, 'GET', '?status=completed')).json()).total, 2);
+  assert.equal((await request(0, 'GET', '?status=pending&status=overdue')).status, 400);
+  assert.equal((await request(0, 'DELETE', `/${editable.id}`)).status, 204);
+  assert.equal((await request(0, 'GET', `/${editable.id}`)).status, 404);
   const raceObject = await createObject({ name: 'Objeto concorrente', categoryId: category.id }, userIds[0]);
   const results = await Promise.allSettled([
     createTask({ ...valid, objectId: raceObject.id }, userIds[0]),
@@ -142,4 +163,5 @@ try {
   if (server) await new Promise(resolve => server.close(resolve));
   await closeDatabase();
 }
+
 

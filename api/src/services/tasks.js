@@ -31,10 +31,27 @@ export function parseTaskPagination(query = {}) {
   return { page: parse(query.page, 1, 1000000), pageSize: parse(query.pageSize, 20, 100) };
 }
 
-export async function listTasks(userId, query) {
-  const { page, pageSize } = parseTaskPagination(query);
-  const collection = getDatabase().collection('tasks');
+export function buildTaskFilter(userId, { objectId, status }, now = new Date()) {
   const filter = { userId };
+  if (objectId !== undefined) filter.objectId = parseObjectId(objectId);
+  if (status === undefined) return filter;
+  if (!['pending', 'overdue', 'completed'].includes(status)) {
+    throw Object.assign(new Error('Usa pending, overdue ou completed.'), { status: 400 });
+  }
+  if (status === 'completed') return { ...filter, status };
+
+  // A data de referência segue o calendário de Lisboa.
+  const today = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Europe/Lisbon', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(now);
+  return { ...filter, status: 'pending', dueOn: status === 'overdue' ? { $lt: today } : { $gte: today } };
+}
+
+export async function listTasks(userId, query = {}) {
+  const { objectId, status, ...pagination } = query;
+  const { page, pageSize } = parseTaskPagination(pagination);
+  const collection = getDatabase().collection('tasks');
+  const filter = buildTaskFilter(userId, { objectId, status });
   const [tasks, total] = await Promise.all([
     collection.find(filter).sort({ dueOn: 1, _id: 1 }).skip((page - 1) * pageSize).limit(pageSize).toArray(),
     collection.countDocuments(filter)
@@ -93,3 +110,42 @@ export async function listObjectHistory(id, userId, query) {
   return { tasks: tasks.map(toPublicTask), page, pageSize, total };
 }
 
+
+
+async function rejectPendingChange(collection, filter) {
+  const existing = await collection.findOne(filter, { projection: { _id: 1 } });
+  if (!existing) throw Object.assign(new Error('Cuidado não encontrado.'), { status: 404 });
+  throw Object.assign(new Error('O cuidado já foi concluído.'), { status: 409 });
+}
+
+export async function updateTask(id, body, userId) {
+  if (!body || typeof body !== 'object' || Array.isArray(body) ||
+      !Object.keys(body).length || Object.keys(body).some(key => !['title', 'dueOn'].includes(key))) {
+    throw Object.assign(new Error('Envia title e/ou dueOn.'), { status: 400 });
+  }
+  const filter = { _id: parseTaskId(id), userId };
+  const collection = getDatabase().collection('tasks');
+  const current = await collection.findOne({ ...filter, status: 'pending' });
+  if (!current) return rejectPendingChange(collection, filter);
+  const validated = buildTask({
+    objectId: current.objectId.toString(),
+    title: Object.hasOwn(body, 'title') ? body.title : current.title,
+    dueOn: Object.hasOwn(body, 'dueOn') ? body.dueOn : current.dueOn
+  }, userId);
+  // Grava só os campos enviados para preservar alterações simultâneas noutros campos.
+  const changes = { updatedAt: validated.updatedAt };
+  if (Object.hasOwn(body, 'title')) changes.title = validated.title;
+  if (Object.hasOwn(body, 'dueOn')) changes.dueOn = validated.dueOn;
+  const updated = await collection.findOneAndUpdate(
+    { ...filter, status: 'pending' }, { $set: changes }, { returnDocument: 'after' }
+  );
+  if (!updated) return rejectPendingChange(collection, filter);
+  return toPublicTask(updated);
+}
+
+export async function deleteTask(id, userId) {
+  const filter = { _id: parseTaskId(id), userId };
+  const collection = getDatabase().collection('tasks');
+  const result = await collection.deleteOne({ ...filter, status: 'pending' });
+  if (!result.deletedCount) await rejectPendingChange(collection, filter);
+}

@@ -625,3 +625,14 @@ Invoke-RestMethod -Uri "http://localhost:3000/objects/$idObjeto/history" -Header
 Pendentes: editar/eliminar tarefas, filtros por objeto/estado, repetição, lembretes,
 dicas e integração dos cuidados com o Flutter. Nenhum lembrete é agendado por esta operação.
 
+
+### Edição, eliminação e filtros de cuidados
+
+- PATCH /tasks/:id recebe title, dueOn ou ambos e devolve 200 com task.
+- DELETE /tasks/:id elimina o cuidado e devolve 204.
+- As duas alterações exigem uma sessão do dono e estado pending. Um cuidado concluído
+  devolve 409 para preservar o histórico. Inexistente ou alheio devolve 404.
+- GET /tasks aceita objectId e status em conjunto com page e pageSize.
+  pending inclui cuidados previstos para hoje ou depois, overdue inclui pendentes
+  com data anterior a hoje, completed inclui concluídos. Hoje segue Europe/Lisbon.
+  Omitir status lista todos. Atraso é calculado na consulta, sem alterar o estado guardado.
