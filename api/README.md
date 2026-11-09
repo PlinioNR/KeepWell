@@ -705,3 +705,9 @@ recent junta conclusões e objetos adicionados, ordenados por occurredAt desc.
 Cada item inclui type, id e objectId, e itens de cuidado incluem taskId e dueOn.
 A lista é calculada na leitura a partir de tasks e objects. As preferências de
 lembrete continuam a ser usadas pela rota de agendamento GET /tasks/reminders.
+
+O comando npm.cmd run seed:demo prepara contas, categorias, objetos, cuidados
+e dicas de demonstração. Reutiliza os registos encontrados pelo dono, nome e
+categoria ou objeto correspondente, preservando os IDs dos objetos. Na primeira
+execução cria exemplos para hoje, em atraso, futuros, recorrentes e concluídos.
+As datas dos exemplos já existentes seguem o percurso normal dos cuidados.

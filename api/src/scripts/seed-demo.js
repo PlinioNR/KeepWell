@@ -2,15 +2,12 @@ import { connectDatabase, closeDatabase } from '../database.js';
 import { registerUser } from '../services/registration.js';
 import { createCategory } from '../services/categories.js';
 import { createObject } from '../services/objects.js';
+import { completeTask, createTask, lisbonDate } from '../services/tasks.js';
+import { createTip } from '../services/tips.js';
+import { ObjectId } from 'mongodb';
 
-// Dados de DEMONSTRAÇÃO para testar a app (contas, categorias e objetos falsos).
+// Dados de demonstração. Reutiliza os objetos e registos que já existem.
 // Uso: npm.cmd run seed:demo
-//
-// Pode correr-se várias vezes: não duplica contas nem categorias, e volta a
-// criar os objetos das contas de demonstração (apaga só os dessas contas).
-// Usa os serviços da API, por isso aplica as mesmas validações e o mesmo
-// hash das palavras-passe que o registo normal.
-// Os emails acabam em .test: são falsos e nunca recebem correio.
 
 const password = 'demo1234';
 
@@ -70,16 +67,58 @@ try {
   }
   console.log(`Categorias prontas: ${categories.length}`);
 
-  // 3. Objetos: apaga os das contas de demonstração e volta a criá-los.
-  let total = 0;
+  // Reutiliza os IDs para manter fotografias, cuidados e histórico ligados.
+  const objectIds = new Map();
   for (const [email, list] of Object.entries(objects)) {
-    await database.collection('objects').deleteMany({ userId: userIds[email] });
     for (const [name, category, acquiredOn] of list) {
-      await createObject({ name, categoryId: categoryIds[category], acquiredOn }, userIds[email]);
-      total++;
+      const categoryId = categoryIds[category];
+      const existing = await database.collection('objects').findOne({
+        userId: userIds[email], name, categoryId: new ObjectId(categoryId)
+      });
+      const id = existing?._id.toString() ??
+        (await createObject({ name, categoryId, acquiredOn }, userIds[email])).id;
+      objectIds.set(email + ':' + name, id);
     }
   }
-  console.log(`Objetos criados: ${total}`);
+
+  const today = lisbonDate(new Date());
+  const dayOffset = (days) => {
+    const date = new Date(today + 'T00:00:00Z');
+    date.setUTCDate(date.getUTCDate() + days);
+    return date.toISOString().slice(0, 10);
+  };
+
+  const examples = [
+    ['ana@keepwell.test', 'Máquina de café', 'Descalcificar a máquina', 0, { reminderEnabled: true }],
+    ['ana@keepwell.test', 'Bicicleta urbana', 'Lubrificar a corrente', 3, { repeatEveryDays: 30 }],
+    ['ana@keepwell.test', 'Portátil', 'Limpar as entradas de ventilação', -2, {}],
+    ['ana@keepwell.test', 'Sofá da sala', 'Aspirar o sofá', -5, {}, 'Limpeza concluída.'],
+    ['bruno@keepwell.test', 'Trotinete elétrica', 'Verificar os travões', 5, {}]
+  ];
+  for (const [email, name, title, days, options, notes] of examples) {
+    const userId = userIds[email];
+    const objectId = objectIds.get(email + ':' + name);
+    const existing = await database.collection('tasks').findOne({
+      userId, objectId: new ObjectId(objectId), title
+    });
+    const id = existing?._id.toString() ??
+      (await createTask({ objectId, title, dueOn: dayOffset(days), ...options }, userId)).id;
+    if (notes && existing?.status !== 'completed') await completeTask(id, { notes }, userId);
+  }
+
+  const tips = [
+    ['Eletrodomésticos', 'Descalcificar a máquina de café', 'Segue as instruções do fabricante e enxagua o depósito depois do ciclo.'],
+    ['Veículos', 'Cuidar da corrente da bicicleta', 'Limpa a corrente antes de lubrificar e retira o excesso com um pano.'],
+    ['Eletrónica', 'Limpar as entradas de ventilação', 'Desliga o portátil e remove o pó exterior com um pincel macio.'],
+    ['Mobiliário', 'Aspirar um sofá de tecido', 'Usa um acessório macio e verifica as instruções de limpeza na etiqueta.']
+  ];
+  for (const [category, title, text] of tips) {
+    const categoryId = categoryIds[category];
+    const existing = await database.collection('tips').findOne({ categoryId: new ObjectId(categoryId), title });
+    if (!existing) await createTip({ categoryId, title, text });
+  }
+
+  console.log('Objetos, cuidados e dicas de demonstração prontos.');
   console.log(`Entrar com ana@keepwell.test, bruno@keepwell.test ou admin@keepwell.test (palavra-passe: ${password}).`);
 } catch (error) {
   console.error('Não foi possível criar os dados de demonstração:', error.message);
@@ -87,3 +126,4 @@ try {
 } finally {
   await closeDatabase();
 }
+
