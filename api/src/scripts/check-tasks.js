@@ -101,6 +101,10 @@ try {
   assert.equal(history.tasks[0].notes, completed.notes);
   assert.equal(history.tasks[0].objectName, object.name);
   assert.equal(history.tasks[0].status, 'completed');
+  assert.deepEqual(history.events, [
+    { type: 'care_completed', occurredAt: completed.completedAt, task: history.tasks[0] },
+    { type: 'object_added', occurredAt: object.createdAt.toISOString() }
+  ]);
   const parallel = await Promise.all([
     request(0, 'POST', `/${second.id}/complete`, {}),
     request(0, 'POST', `/${second.id}/complete`, {})
@@ -117,7 +121,9 @@ try {
   assert.notEqual(firstPage.tasks[0].id, secondPage.tasks[0].id);
   assert.ok(Date.parse(firstPage.tasks[0].completedAt) >= Date.parse(secondPage.tasks[0].completedAt));
   const emptyHistory = await fetch(`http://127.0.0.1:${server.address().port}/objects/${otherObject.id}/history`, auth(1));
-  assert.equal((await emptyHistory.json()).total, 0);
+  const emptyHistoryBody = await emptyHistory.json();
+  assert.equal(emptyHistoryBody.total, 0);
+  assert.deepEqual(emptyHistoryBody.events, [{ type: 'object_added', occurredAt: otherObject.createdAt.toISOString() }]);
   assert.equal((await fetch(historyUrl + '?pageSize=101', auth(0))).status, 400);
   await assert.rejects(deleteObject(object.id, userIds[0]), { status: 409 });
   const editable = await createTask({ ...valid, dueOn: '2099-01-01' }, userIds[0]);

@@ -159,7 +159,7 @@ export async function listObjectHistory(id, userId, query) {
   const { page, pageSize } = parseTaskPagination(query);
   const objectId = parseObjectId(id);
   const database = getDatabase();
-  const object = await database.collection('objects').findOne({ _id: objectId, userId }, { projection: { name: 1 } });
+  const object = await database.collection('objects').findOne({ _id: objectId, userId }, { projection: { name: 1, createdAt: 1 } });
   if (!object) throw Object.assign(new Error('Objeto não encontrado.'), { status: 404 });
   const collection = database.collection('tasks');
   const filter = { userId, objectId, status: 'completed' };
@@ -167,7 +167,17 @@ export async function listObjectHistory(id, userId, query) {
     collection.find(filter).sort({ completedAt: -1, _id: -1 }).skip((page - 1) * pageSize).limit(pageSize).toArray(),
     collection.countDocuments(filter)
   ]);
-  return { tasks: tasks.map(task => ({ ...toPublicTask(task), objectName: object.name })), page, pageSize, total };
+  const completedTasks = tasks.map(task => ({ ...toPublicTask(task), objectName: object.name }));
+  const events = completedTasks.map(task => ({
+    type: 'care_completed',
+    occurredAt: task.completedAt,
+    task
+  }));
+  const lastPage = Math.max(1, Math.ceil(total / pageSize));
+  if (page === lastPage && object.createdAt) {
+    events.push({ type: 'object_added', occurredAt: object.createdAt });
+  }
+  return { tasks: completedTasks, events, page, pageSize, total };
 }
 
 
