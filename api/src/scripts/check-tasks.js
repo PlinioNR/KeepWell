@@ -99,6 +99,7 @@ try {
   assert.equal(history.total, 1);
   assert.equal(history.tasks[0].id, completed.id);
   assert.equal(history.tasks[0].notes, completed.notes);
+  assert.equal(history.tasks[0].objectName, object.name);
   assert.equal(history.tasks[0].status, 'completed');
   const parallel = await Promise.all([
     request(0, 'POST', `/${second.id}/complete`, {}),
@@ -191,6 +192,22 @@ try {
   const remindersOn = await request(0, 'GET', '/reminders?pageSize=1');
   assert.equal(remindersOn.status, 200);
   const reminderPage = await remindersOn.json();
+  assert.equal(reminderPage.tasks[0].objectName, object.name);
+  const details = await request(0, 'GET', '/' + completed.id);
+  assert.equal(details.status, 200);
+  assert.equal((await details.json()).task.objectName, object.name);
+  await database.collection('objects').updateOne(
+    { _id: new ObjectId(object.id), userId: userIds[0] },
+    { $set: { name: 'Nome atualizado no teste' } }
+  );
+  const renamedList = await request(0, 'GET', '?objectId=' + object.id);
+  const renamedTasks = (await renamedList.json()).tasks;
+  assert.ok(renamedTasks.length > 0);
+  assert.ok(renamedTasks.every(task => task.objectName === 'Nome atualizado no teste'));
+  await database.collection('objects').updateOne(
+    { _id: new ObjectId(object.id), userId: userIds[0] },
+    { $set: { name: object.name } }
+  );
   assert.equal(reminderPage.total, 1);
   assert.deepEqual(reminderPage.tasks.map(task => task.id), [successors[0]._id.toString()]);
   assert.equal((await request(0, 'GET', '/reminders?pageSize=0')).status, 400);
@@ -247,6 +264,7 @@ try {
   if (server) await new Promise(resolve => server.close(resolve));
   await closeDatabase();
 }
+
 
 
 

@@ -741,3 +741,8 @@ ficheiros na pasta configurada. Lista referências sem ficheiro e ficheiros
 gerados pela API sem referência. O comando é apenas de leitura e termina com
 código 1 se encontrar diferenças. Executa-o sem uploads ou eliminações em curso
 para evitar diferenças transitórias.
+
+GET /tasks, GET /tasks/:id, GET /tasks/reminders e GET /objects/:id/history
+incluem objectName em cada cuidado. O nome é obtido do objeto atual, sem o
+duplicar no documento da tarefa. Se a referência não puder ser resolvida na
+conta autenticada, a listagem e o detalhe devolvem objectName: null.

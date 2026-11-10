@@ -64,13 +64,27 @@ export function buildTaskFilter(userId, { objectId, status, dueFrom, dueTo }, no
   return filter;
 }
 
+async function tasksWithObjectName(tasks, userId) {
+  if (!tasks.length) return [];
+  // Uma consulta para os nomes de todos os objetos da página.
+  const objects = await getDatabase().collection('objects').find(
+    { userId, _id: { $in: tasks.map(task => task.objectId) } },
+    { projection: { name: 1 } }
+  ).toArray();
+  const names = new Map(objects.map(object => [object._id.toString(), object.name]));
+  return tasks.map(task => ({
+    ...toPublicTask(task),
+    objectName: names.get(task.objectId.toString()) ?? null
+  }));
+}
+
 async function readTaskPage(filter, { page, pageSize }) {
   const collection = getDatabase().collection('tasks');
   const [tasks, total] = await Promise.all([
     collection.find(filter).sort({ dueOn: 1, _id: 1 }).skip((page - 1) * pageSize).limit(pageSize).toArray(),
     collection.countDocuments(filter)
   ]);
-  return { tasks: tasks.map(toPublicTask), page, pageSize, total };
+  return { tasks: await tasksWithObjectName(tasks, filter.userId), page, pageSize, total };
 }
 
 export async function listTasks(userId, query = {}) {
@@ -91,7 +105,8 @@ export async function listReminders(user, query) {
 export async function getTask(id, userId) {
   const task = await getDatabase().collection('tasks').findOne({ _id: parseTaskId(id), userId });
   if (!task) throw Object.assign(new Error('Cuidado não encontrado.'), { status: 404 });
-  return toPublicTask(task);
+  const [result] = await tasksWithObjectName([task], userId);
+  return result;
 }
 
 export function validateCompletion(body = {}) {
@@ -144,7 +159,7 @@ export async function listObjectHistory(id, userId, query) {
   const { page, pageSize } = parseTaskPagination(query);
   const objectId = parseObjectId(id);
   const database = getDatabase();
-  const object = await database.collection('objects').findOne({ _id: objectId, userId }, { projection: { _id: 1 } });
+  const object = await database.collection('objects').findOne({ _id: objectId, userId }, { projection: { name: 1 } });
   if (!object) throw Object.assign(new Error('Objeto não encontrado.'), { status: 404 });
   const collection = database.collection('tasks');
   const filter = { userId, objectId, status: 'completed' };
@@ -152,7 +167,7 @@ export async function listObjectHistory(id, userId, query) {
     collection.find(filter).sort({ completedAt: -1, _id: -1 }).skip((page - 1) * pageSize).limit(pageSize).toArray(),
     collection.countDocuments(filter)
   ]);
-  return { tasks: tasks.map(toPublicTask), page, pageSize, total };
+  return { tasks: tasks.map(task => ({ ...toPublicTask(task), objectName: object.name })), page, pageSize, total };
 }
 
 
@@ -198,6 +213,7 @@ export async function deleteTask(id, userId) {
   const result = await collection.deleteOne({ ...filter, status: 'pending' });
   if (!result.deletedCount) await rejectPendingChange(collection, filter);
 }
+
 
 
 
