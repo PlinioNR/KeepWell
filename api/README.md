@@ -723,3 +723,15 @@ GET /health/storage exige uma sessão de administrador. A API escreve, lê e
 remove um ficheiro temporário na pasta de fotografias. Devolve 200 com storage
 available quando o teste passa, ou 503 com storage unavailable se falhar.
 A resposta não expõe o caminho da pasta.
+
+HOST no .env permite escolher onde a API escuta. 127.0.0.1 limita ao PC.
+0.0.0.0 permite escutar nas interfaces IPv4. Num telemóvel na mesma rede,
+usa o IP local do PC com a porta configurada, por exemplo
+http://192.168.1.10:3000. Se HOST for omitido, o Node usa a escuta padrão.
+O endereço de escuta e a porta aparecem no terminal ao arrancar.
+
+Na pasta api, npm.cmd run test:backend executa os testes locais e as seis
+suites de integração existentes, incluindo categorias e dicas na mesma suite.
+Mostra um resumo no fim e termina com código diferente de zero se alguma falhar.
+As integrações usam o Atlas configurado no .env e removem os seus dados de teste.
+O seed de demonstração é executado separadamente.

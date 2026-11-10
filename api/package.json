@@ -16,7 +16,8 @@
     "test:objects": "node --env-file=.env src/scripts/check-objects.js",
     "seed:demo": "node --env-file=.env src/scripts/seed-demo.js",
     "test:photos": "node --env-file=.env src/scripts/check-photos.js",
-    "test:tasks": "node --env-file=.env src/scripts/check-tasks.js"
+    "test:tasks": "node --env-file=.env src/scripts/check-tasks.js",
+    "test:backend": "node src/scripts/check-backend.js"
   },
   "engines": {
     "node": ">=24"
