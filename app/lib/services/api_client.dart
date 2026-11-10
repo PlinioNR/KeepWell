@@ -49,12 +49,17 @@ class ApiClient {
     );
   }
 
-  /// Envia uma fotografia (PUT) no formato "multipart/form-data",
-  /// que é o formato usado para enviar ficheiros, no campo "photo".
-  Future<Map<String, dynamic>> putPhoto(String path, String filePath) {
+  /// Envia uma fotografia no formato "multipart/form-data", que é o
+  /// formato usado para enviar ficheiros, no campo "photo".
+  /// [method] é 'PUT' (guardar a foto) ou 'POST' (analisar a foto).
+  Future<Map<String, dynamic>> sendPhoto(
+    String method,
+    String path,
+    String filePath,
+  ) {
     return _send(() async {
       final request =
-          http.MultipartRequest('PUT', Uri.parse('$apiBaseUrl$path'))
+          http.MultipartRequest(method, Uri.parse('$apiBaseUrl$path'))
             ..headers.addAll(authHeader)
             ..files.add(
               await http.MultipartFile.fromPath(

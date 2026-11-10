@@ -161,4 +161,31 @@ void main() {
     expect(sentBody, contains('content-type: image/jpeg'));
     expect(object.photoUrl, '/objects/9/photo');
   });
+
+  test(
+    'analyzePhoto: envia a foto em POST e lê o nome e a categoria',
+    () async {
+      final file = File('${Directory.systemTemp.path}/keepwell_analise.jpg')
+        ..writeAsBytesSync([1, 2, 3]);
+      late http.BaseRequest sentRequest;
+      final service = ObjectService(
+        api: ApiClient(
+          client: MockClient((request) async {
+            sentRequest = request;
+            return jsonResponse({
+              'object': {'name': 'Bicicleta', 'categoryId': 'c1'},
+              'suggestedTasks': [],
+            }, 200);
+          }),
+        ),
+      );
+
+      final result = await service.analyzePhoto(file.path);
+
+      expect(sentRequest.method, 'POST');
+      expect(sentRequest.url.path, '/objects/photo-analysis');
+      expect(result['name'], 'Bicicleta');
+      expect(result['categoryId'], 'c1');
+    },
+  );
 }

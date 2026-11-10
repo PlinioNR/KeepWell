@@ -43,8 +43,26 @@ class ObjectService {
   ///
   /// [filePath] é o caminho do ficheiro no telemóvel (vem da câmara).
   Future<UserObject> uploadPhoto(String objectId, String filePath) async {
-    final body = await _api.putPhoto('/objects/$objectId/photo', filePath);
+    final body = await _api.sendPhoto(
+      'PUT',
+      '/objects/$objectId/photo',
+      filePath,
+    );
     return UserObject.fromJson(body['object'] as Map<String, dynamic>);
+  }
+
+  /// Pede ao Gemini (através da API) para identificar o objeto da foto:
+  /// POST /objects/photo-analysis. Não grava nada.
+  ///
+  /// Devolve {'name': ..., 'categoryId': ...}; cada um pode vir null
+  /// se o Gemini não tiver a certeza.
+  Future<Map<String, dynamic>> analyzePhoto(String filePath) async {
+    final body = await _api.sendPhoto(
+      'POST',
+      '/objects/photo-analysis',
+      filePath,
+    );
+    return body['object'] as Map<String, dynamic>;
   }
 
   /// Lista todas as categorias: GET /categories.

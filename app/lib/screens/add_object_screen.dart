@@ -46,6 +46,57 @@ class _AddObjectScreenState extends State<AddObjectScreen> {
 
   bool _isLoading = false;
 
+  // Se o Gemini está a analisar a foto.
+  bool _isAnalyzing = false;
+
+  // Última sugestão da análise. Serve para saber se o campo ainda tem o
+  // que a análise pôs (pode ser trocado) ou se a pessoa o alterou.
+  String _suggestedName = '';
+  String? _suggestedCategoryId;
+
+  /// Guarda a foto escolhida e pede à API para a analisar.
+  ///
+  /// A resposta só preenche um campo se estiver vazio ou ainda tiver a
+  /// sugestão da foto anterior: nunca apaga o que a pessoa escreveu.
+  Future<void> _onPhotoPicked(String path) async {
+    setState(() {
+      _photoPath = path;
+      _isAnalyzing = true;
+    });
+
+    try {
+      final result = await _objectService.analyzePhoto(path);
+      // Se entretanto trocou de foto, esta resposta já não interessa.
+      if (!mounted || path != _photoPath) return;
+      final name = _nameController.text.trim();
+      setState(() {
+        if (name.isEmpty || name == _suggestedName) {
+          _suggestedName = result['name'] ?? '';
+          _nameController.text = _suggestedName;
+        }
+        if (_categoryId == null || _categoryId == _suggestedCategoryId) {
+          _suggestedCategoryId = result['categoryId'];
+          _categoryId = _suggestedCategoryId;
+        }
+      });
+      // O Gemini pode não reconhecer o objeto: avisamos em vez de ficar calado.
+      if (result['name'] == null) {
+        _showMessage('Não foi possível identificar o objeto. Preencha à mão.');
+      }
+    } on ApiException catch (error) {
+      // A análise é uma ajuda: se falhar, preenche-se à mão.
+      if (mounted && path == _photoPath) _showMessage(error.message);
+    }
+
+    if (mounted && path == _photoPath) setState(() => _isAnalyzing = false);
+  }
+
+  /// Mostra uma mensagem curta no fundo do ecrã.
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -94,12 +145,8 @@ class _AddObjectScreenState extends State<AddObjectScreen> {
         } on ApiException catch (error) {
           // O objeto já ficou guardado; avisamos só que a foto falhou.
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Objeto guardado, mas a fotografia falhou: ${error.message}',
-                ),
-              ),
+            _showMessage(
+              'Objeto guardado, mas a fotografia falhou: ${error.message}',
             );
           }
         }
@@ -110,8 +157,7 @@ class _AddObjectScreenState extends State<AddObjectScreen> {
       Navigator.pop(context, true);
     } on ApiException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.message)));
+      _showMessage(error.message);
       setState(() => _isLoading = false);
     }
   }
@@ -141,7 +187,20 @@ class _AddObjectScreenState extends State<AddObjectScreen> {
                   children: [
                     PhotoPickerBox(
                       photoPath: _photoPath,
-                      onPicked: (path) => setState(() => _photoPath = path),
+                      onPicked: _onPhotoPicked,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    // Durante a análise mostra uma barra a carregar;
+                    // antes e depois, avisa que a foto vai para o Google.
+                    if (_isAnalyzing) const LinearProgressIndicator(),
+                    Text(
+                      _isAnalyzing
+                          ? 'A analisar a fotografia…'
+                          : 'A fotografia é analisada pelo Google para sugerir '
+                                'o nome e a categoria.',
+                      style: text.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     AppTextField(
@@ -156,6 +215,9 @@ class _AddObjectScreenState extends State<AddObjectScreen> {
                     Text('Categoria', style: text.labelMedium),
                     const SizedBox(height: AppSpacing.sm),
                     DropdownButtonFormField<String>(
+                      // A key muda com a categoria: assim o campo mostra
+                      // também a categoria preenchida pela análise da foto.
+                      key: ValueKey(_categoryId),
                       initialValue: _categoryId,
                       hint: const Text('Escolha uma categoria'),
                       icon: const Icon(LucideIcons.chevronDown, size: 16),
