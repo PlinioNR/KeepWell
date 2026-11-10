@@ -107,8 +107,8 @@ Legenda: ✅ concluído · ◐ iniciado · sem marca = planeado.
   - 5.2.4 Terminar sessão ✅ (ligado à API, testado a 06/11; botão provisório na Home, passa para o Settings)
 - 5.3 Objetos
   - 5.3.1 Início
-  - 5.3.2 Lista com pesquisa e filtro por categoria ◐ (lista e barra de separadores feitas; falta pesquisa e filtro)
-  - 5.3.3 Adicionar e editar objeto com fotografia (câmara)
+  - 5.3.2 Lista com pesquisa e filtro por categoria ◐ (pesquisa e filtro feitos na app a 09/11; falta testar no emulador)
+  - 5.3.3 Adicionar e editar objeto com fotografia (câmara) ◐ (adicionar com foto (câmara ou galeria) feito a 09/11; falta testar no emulador e editar)
   - 5.3.4 Detalhe e eliminação do objeto
   - 5.3.5 Histórico do objeto
 - 5.4 Cuidados

@@ -27,6 +27,8 @@ abstract final class AppTheme {
       outline: AppColors.primary200,
       // Fundo do quadrado da foto nos cartões de objeto.
       surfaceContainerHighest: AppColors.primary100,
+      // Borda dos cartões e dos chips de categoria.
+      outlineVariant: AppColors.primary300,
     ),
     // No Figma o fundo dos ecrãs é neutral/white.
     scaffold: AppColors.white,
@@ -34,7 +36,6 @@ abstract final class AppTheme {
     inputFill: AppColors.secondary100,
     // Os ícones Lucide no Figma estão ligados a Secondary/900.
     iconColor: AppColors.secondary900,
-    cardBorder: AppColors.primary300,
     inactiveTab: AppColors.primary300,
     tabBarBorder: AppColors.secondary200,
   );
@@ -55,12 +56,12 @@ abstract final class AppTheme {
       onSurfaceVariant: AppColors.primary200,
       outline: AppColors.primary400,
       surfaceContainerHighest: AppColors.primary600,
+      outlineVariant: AppColors.primary400,
     ),
     scaffold: AppColors.primary800,
     outlinedButtonFill: Colors.transparent,
     inputFill: AppColors.primary700,
     iconColor: AppColors.secondary100,
-    cardBorder: AppColors.primary400,
     inactiveTab: AppColors.primary300,
     tabBarBorder: AppColors.primary700,
   );
@@ -71,7 +72,6 @@ abstract final class AppTheme {
     required Color outlinedButtonFill,
     required Color inputFill,
     required Color iconColor,
-    required Color cardBorder,
     required Color inactiveTab,
     required Color tabBarBorder,
   }) {
@@ -154,7 +154,7 @@ abstract final class AppTheme {
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          side: BorderSide(color: cardBorder),
+          side: BorderSide(color: colors.outlineVariant),
         ),
       ),
       // Tab Bar do Figma: sem "pílula" de fundo; o separador ativo fica

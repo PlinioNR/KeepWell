@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../services/api_client.dart';
 import '../theme/app_spacing.dart';
 
 /// Cartão de um objeto na lista (componente Object Card do Figma).
 ///
-/// Mostra a foto (por agora um ícone, porque a API ainda não guarda fotos),
-/// o nome, a categoria e uma seta. O aspeto (fundo, borda e cantos)
+/// Mostra a foto (ou um ícone, se não tiver), o nome, a categoria e uma
+/// seta. O aspeto (fundo, borda e cantos)
 /// vem do cardTheme em app_theme.dart.
 class ObjectCard extends StatelessWidget {
   const ObjectCard({
     super.key,
     required this.name,
     required this.category,
+    this.photoUrl,
     this.onTap,
   });
 
   final String name;
   final String category;
+
+  /// Endereço completo da foto na API, ou null se o objeto não tem foto.
+  final String? photoUrl;
 
   /// O que acontece ao tocar no cartão (mais tarde: abrir o detalhe).
   final VoidCallback? onTap;
@@ -43,7 +48,19 @@ class ObjectCard extends StatelessWidget {
                   color: colors.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
-                child: const Icon(LucideIcons.package),
+                // Corta a foto com os mesmos cantos arredondados.
+                clipBehavior: Clip.antiAlias,
+                child: photoUrl == null
+                    ? const Icon(LucideIcons.package)
+                    // A foto também precisa do token para ser vista.
+                    // Se falhar a carregar, mostra o ícone (errorBuilder).
+                    : Image.network(
+                        photoUrl!,
+                        headers: ApiClient.authHeader,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(LucideIcons.package),
+                      ),
               ),
               const SizedBox(width: AppSpacing.md),
               // Expanded ocupa o espaço livre; nomes longos ficam com "…".

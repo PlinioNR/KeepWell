@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'screens/welcome_screen.dart';
 import 'theme/app_theme.dart';
@@ -22,6 +23,11 @@ class KeepWellApp extends StatelessWidget {
       // Por agora segue o modo do telemóvel; o interruptor do ecrã
       // Definições vem mais tarde.
       themeMode: ThemeMode.system,
+      // Português de Portugal nos componentes do Flutter (ex.: o
+      // calendário para escolher datas mostra meses e botões em PT).
+      locale: const Locale('pt', 'PT'),
+      supportedLocales: const [Locale('pt', 'PT')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       home: const WelcomeScreen(),
     );
   }

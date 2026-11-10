@@ -31,3 +31,12 @@ String? validateNewPassword(String? value) {
   if (password.contains(RegExp(r'\s'))) return 'Não use espaços.';
   return null;
 }
+
+/// Nome de um objeto: obrigatório, entre 2 e 100 caracteres (regra da API).
+String? validateObjectName(String? value) {
+  final name = value?.trim() ?? '';
+  if (name.isEmpty) return 'Escreva o nome do objeto.';
+  if (name.length < 2) return 'Use pelo menos 2 caracteres.';
+  if (name.length > 100) return 'Use no máximo 100 caracteres.';
+  return null;
+}

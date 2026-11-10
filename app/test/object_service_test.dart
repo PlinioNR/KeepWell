@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -88,5 +89,76 @@ void main() {
         ),
       ),
     );
+  });
+
+  test('createObject: envia os dados em JSON e lê o objeto criado', () async {
+    late http.Request sentRequest;
+    final service = ObjectService(
+      api: ApiClient(
+        client: MockClient((request) async {
+          sentRequest = request;
+          return jsonResponse({
+            'object': {
+              'id': '9',
+              'name': 'Portátil',
+              'categoryId': 'c1',
+              'acquiredOn': '2024-03-09',
+            },
+          }, 201);
+        }),
+      ),
+    );
+
+    final object = await service.createObject(
+      name: 'Portátil',
+      categoryId: 'c1',
+      acquiredOn: '2024-03-09',
+    );
+
+    expect(sentRequest.method, 'POST');
+    expect(sentRequest.url.path, '/objects');
+    expect(jsonDecode(sentRequest.body), {
+      'name': 'Portátil',
+      'categoryId': 'c1',
+      'acquiredOn': '2024-03-09',
+    });
+    expect(object.id, '9');
+  });
+
+  test('uploadPhoto: envia a foto em multipart no campo photo', () async {
+    // Ficheiro temporário a fazer de fotografia.
+    final file = File('${Directory.systemTemp.path}/keepwell_test.jpg')
+      ..writeAsBytesSync([1, 2, 3]);
+    late http.BaseRequest sentRequest;
+    late String sentBody;
+    final service = ObjectService(
+      api: ApiClient(
+        client: MockClient((request) async {
+          sentRequest = request;
+          sentBody = request.body;
+          return jsonResponse({
+            'object': {
+              'id': '9',
+              'name': 'Portátil',
+              'categoryId': 'c1',
+              'acquiredOn': null,
+              'photoUrl': '/objects/9/photo',
+            },
+          }, 200);
+        }),
+      ),
+    );
+
+    final object = await service.uploadPhoto('9', file.path);
+
+    expect(sentRequest.method, 'PUT');
+    expect(sentRequest.url.path, '/objects/9/photo');
+    expect(
+      sentRequest.headers['content-type'],
+      contains('multipart/form-data'),
+    );
+    expect(sentBody, contains('name="photo"'));
+    expect(sentBody, contains('content-type: image/jpeg'));
+    expect(object.photoUrl, '/objects/9/photo');
   });
 }

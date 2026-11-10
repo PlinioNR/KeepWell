@@ -22,6 +22,31 @@ class ObjectService {
         .toList();
   }
 
+  /// Cria um objeto novo: POST /objects.
+  ///
+  /// [acquiredOn] é a data de aquisição em 'AAAA-MM-DD', ou null.
+  /// Devolve o objeto criado, já com o id que a API lhe deu.
+  Future<UserObject> createObject({
+    required String name,
+    required String categoryId,
+    String? acquiredOn,
+  }) async {
+    final body = await _api.post('/objects', {
+      'name': name,
+      'categoryId': categoryId,
+      'acquiredOn': acquiredOn,
+    });
+    return UserObject.fromJson(body['object'] as Map<String, dynamic>);
+  }
+
+  /// Envia a fotografia de um objeto: PUT /objects/:id/photo.
+  ///
+  /// [filePath] é o caminho do ficheiro no telemóvel (vem da câmara).
+  Future<UserObject> uploadPhoto(String objectId, String filePath) async {
+    final body = await _api.putPhoto('/objects/$objectId/photo', filePath);
+    return UserObject.fromJson(body['object'] as Map<String, dynamic>);
+  }
+
   /// Lista todas as categorias: GET /categories.
   Future<List<Category>> fetchCategories() async {
     final body = await _api.get('/categories');

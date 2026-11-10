@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../models/category.dart';
 import '../models/user_object.dart';
+import '../services/api_config.dart';
 import '../services/api_exception.dart';
 import '../services/object_service.dart';
 import '../theme/app_spacing.dart';
+import '../widgets/category_chip.dart';
 import '../widgets/object_card.dart';
+import 'add_object_screen.dart';
 
 /// Ecrã 06 Objects: lista dos objetos de quem tem sessão iniciada.
 ///
 /// É um StatefulWidget porque os dados chegam da API depois de o ecrã
 /// abrir. Enquanto esperamos, mostramos "a carregar"; se falhar, um erro.
-/// Ainda falta: pesquisa e filtro por categoria (próximo passo).
+///
+/// A pesquisa e o filtro por categoria são feitos na app, sobre a lista
+/// que já veio da API (não fazem pedidos novos).
 class ObjectsScreen extends StatefulWidget {
   const ObjectsScreen({super.key});
 
@@ -27,14 +33,61 @@ class _ObjectsScreenState extends State<ObjectsScreen> {
   String? _errorMessage; // 2. correu mal (null = sem erro)
   List<UserObject> _objects = []; // 3. dados recebidos (pode estar vazia)
 
+  // Categorias, para os chips de filtro.
+  List<Category> _categories = [];
+
   // Nome de cada categoria, pelo id: {'id123': 'Veículos', ...}
   Map<String, String> _categoryNames = {};
+
+  // Texto escrito no campo de pesquisa.
+  final _searchController = TextEditingController();
+
+  // Categoria escolhida nos chips (null = "Todos").
+  String? _selectedCategoryId;
 
   // initState corre uma vez, quando o ecrã é criado.
   @override
   void initState() {
     super.initState();
     _loadObjects();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  /// Abre o ecrã Novo objeto e, se for criado, atualiza a lista.
+  Future<void> _openAddObject() async {
+    // "await" espera que o ecrã Novo objeto feche. Ele devolve true
+    // se o objeto foi guardado.
+    final created = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddObjectScreen(categories: _categories),
+      ),
+    );
+
+    if (created != true || !mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Objeto adicionado.')));
+    _loadObjects();
+  }
+
+  /// Objetos que passam na pesquisa e no filtro de categoria.
+  ///
+  /// É um "getter": calcula a lista sempre que é usado, por isso fica
+  /// atualizada a cada setState.
+  List<UserObject> get _visibleObjects {
+    final search = _searchController.text.trim().toLowerCase();
+    return _objects.where((object) {
+      final matchesSearch = object.name.toLowerCase().contains(search);
+      final matchesCategory =
+          _selectedCategoryId == null ||
+          object.categoryId == _selectedCategoryId;
+      return matchesSearch && matchesCategory;
+    }).toList();
   }
 
   /// Pede os objetos e as categorias à API.
@@ -52,6 +105,7 @@ class _ObjectsScreenState extends State<ObjectsScreen> {
       if (!mounted) return;
       setState(() {
         _objects = objects;
+        _categories = categories;
         _categoryNames = {for (final c in categories) c.id: c.name};
         _isLoading = false;
       });
@@ -75,10 +129,7 @@ class _ObjectsScreenState extends State<ObjectsScreen> {
           IconButton(
             icon: const Icon(LucideIcons.plus),
             tooltip: 'Adicionar objeto',
-            // O ecrã 07 Add Object ainda não existe.
-            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Adicionar objeto: em breve.')),
-            ),
+            onPressed: _openAddObject,
           ),
         ],
       ),
@@ -130,20 +181,84 @@ class _ObjectsScreenState extends State<ObjectsScreen> {
       );
     }
 
-    // ListView.separated põe um espaço de 16 entre cartões.
-    return ListView.separated(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      itemCount: _objects.length,
-      separatorBuilder: (context, index) =>
-          const SizedBox(height: AppSpacing.md),
-      itemBuilder: (context, index) {
-        final object = _objects[index];
-        return ObjectCard(
-          name: object.name,
-          // "??" usa o texto da direita se a categoria não for encontrada.
-          category: _categoryNames[object.categoryId] ?? 'Sem categoria',
-        );
-      },
+    final visibleObjects = _visibleObjects;
+
+    return Column(
+      children: [
+        // Campo de pesquisa: a cada letra, setState redesenha a lista.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.md,
+            0,
+          ),
+          child: TextField(
+            controller: _searchController,
+            textInputAction: TextInputAction.search,
+            decoration: const InputDecoration(hintText: 'Pesquisar objetos'),
+            onChanged: (_) => setState(() {}),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        // Chips numa fila que desliza para o lado.
+        SizedBox(
+          height: 44,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            children: [
+              CategoryChip(
+                label: 'Todos',
+                selected: _selectedCategoryId == null,
+                onTap: () => setState(() => _selectedCategoryId = null),
+              ),
+              // Um chip por categoria.
+              for (final category in _categories) ...[
+                const SizedBox(width: AppSpacing.sm),
+                CategoryChip(
+                  label: category.name,
+                  selected: _selectedCategoryId == category.id,
+                  onTap: () =>
+                      setState(() => _selectedCategoryId = category.id),
+                ),
+              ],
+            ],
+          ),
+        ),
+        // Expanded: a lista ocupa o resto do ecrã e desliza sozinha.
+        Expanded(
+          child: visibleObjects.isEmpty
+              ? Center(
+                  child: Text(
+                    'Nenhum objeto encontrado.',
+                    style: text.bodyLarge,
+                  ),
+                )
+              // ListView.separated põe um espaço de 16 entre cartões.
+              : ListView.separated(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  itemCount: visibleObjects.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: AppSpacing.md),
+                  itemBuilder: (context, index) {
+                    final object = visibleObjects[index];
+                    return ObjectCard(
+                      name: object.name,
+                      // "??" usa o texto da direita se a categoria não
+                      // for encontrada.
+                      category:
+                          _categoryNames[object.categoryId] ?? 'Sem categoria',
+                      // A API dá só o caminho da foto; juntamos o
+                      // endereço do servidor.
+                      photoUrl: object.photoUrl == null
+                          ? null
+                          : '$apiBaseUrl${object.photoUrl}',
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 }

@@ -8,6 +8,7 @@ class UserObject {
     required this.name,
     required this.categoryId,
     this.acquiredOn,
+    this.photoUrl,
   });
 
   final String id;
@@ -19,6 +20,9 @@ class UserObject {
   /// Data de aquisição no formato 'AAAA-MM-DD', ou null se não foi indicada.
   final String? acquiredOn;
 
+  /// Caminho da foto na API (ex.: '/objects/123/photo'), ou null sem foto.
+  final String? photoUrl;
+
   /// Cria um UserObject a partir do JSON da API.
   factory UserObject.fromJson(Map<String, dynamic> json) {
     return UserObject(
@@ -26,6 +30,7 @@ class UserObject {
       name: json['name'] as String,
       categoryId: json['categoryId'] as String,
       acquiredOn: json['acquiredOn'] as String?,
+      photoUrl: json['photoUrl'] as String?,
     );
   }
 }

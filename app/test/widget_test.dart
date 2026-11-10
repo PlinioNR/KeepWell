@@ -3,8 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:keepwell/main.dart';
+import 'package:keepwell/models/category.dart';
+import 'package:keepwell/screens/add_object_screen.dart';
 import 'package:keepwell/theme/app_theme.dart';
+import 'package:keepwell/widgets/category_chip.dart';
 import 'package:keepwell/widgets/object_card.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 void main() {
   // Nos testes não há Internet para descarregar a fonte.
@@ -85,5 +89,47 @@ void main() {
 
     expect(find.text('Bicicleta urbana'), findsOneWidget);
     expect(find.text('Veículos'), findsOneWidget);
+  });
+
+  testWidgets('Chip de categoria: só o selecionado mostra o ✓', (tester) async {
+    var taps = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: Row(
+            children: [
+              CategoryChip(label: 'Todos', selected: true, onTap: () {}),
+              CategoryChip(
+                label: 'Veículos',
+                selected: false,
+                onTap: () => taps++,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byIcon(LucideIcons.check), findsOneWidget);
+    await tester.tap(find.text('Veículos'));
+    expect(taps, 1);
+  });
+
+  testWidgets('Novo objeto: valida nome e categoria', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: const AddObjectScreen(
+          categories: [Category(id: 'c1', name: 'Veículos', icon: 'bike')],
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('GUARDAR OBJETO'));
+    await tester.pump();
+
+    expect(find.text('Escreva o nome do objeto.'), findsOneWidget);
+    expect(find.text('Escolha uma categoria.'), findsOneWidget);
   });
 }

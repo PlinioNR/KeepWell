@@ -14,4 +14,10 @@ void main() {
     expect(validateNewPassword('a' * 21), 'Use no máximo 20 caracteres.');
     expect(validateNewPassword('abc 123'), 'Não use espaços.');
   });
+
+  test('nome do objeto: obrigatório e com pelo menos 2 caracteres', () {
+    expect(validateObjectName('  '), 'Escreva o nome do objeto.');
+    expect(validateObjectName('a'), 'Use pelo menos 2 caracteres.');
+    expect(validateObjectName('Bicicleta'), isNull);
+  });
 }
