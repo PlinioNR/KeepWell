@@ -145,6 +145,7 @@ export async function completeTask(id, body, userId) {
       const next = buildTask({
         objectId: completed.objectId.toString(),
         title: completed.title,
+        description: completed.description,
         dueOn: nextDate.toISOString().slice(0, 10),
         repeatEveryDays: completed.repeatEveryDays,
         reminderEnabled: completed.reminderEnabled
@@ -190,8 +191,8 @@ async function rejectPendingChange(collection, filter) {
 
 export async function updateTask(id, body, userId) {
   if (!body || typeof body !== 'object' || Array.isArray(body) ||
-      !Object.keys(body).length || Object.keys(body).some(key => !['title', 'dueOn', 'repeatEveryDays', 'reminderEnabled'].includes(key))) {
-    throw Object.assign(new Error('Envia title, dueOn, repeatEveryDays e/ou reminderEnabled.'), { status: 400 });
+      !Object.keys(body).length || Object.keys(body).some(key => !['title', 'description', 'dueOn', 'repeatEveryDays', 'reminderEnabled'].includes(key))) {
+    throw Object.assign(new Error('Envia title, description, dueOn, repeatEveryDays e/ou reminderEnabled.'), { status: 400 });
   }
   const filter = { _id: parseTaskId(id), userId };
   const collection = getDatabase().collection('tasks');
@@ -200,6 +201,7 @@ export async function updateTask(id, body, userId) {
   const validated = buildTask({
     objectId: current.objectId.toString(),
     title: Object.hasOwn(body, 'title') ? body.title : current.title,
+    description: body.description,
     dueOn: Object.hasOwn(body, 'dueOn') ? body.dueOn : current.dueOn,
     repeatEveryDays: body.repeatEveryDays,
     reminderEnabled: body.reminderEnabled
@@ -207,6 +209,7 @@ export async function updateTask(id, body, userId) {
   // Grava só os campos enviados para preservar alterações simultâneas noutros campos.
   const changes = { updatedAt: validated.updatedAt };
   if (Object.hasOwn(body, 'title')) changes.title = validated.title;
+  if (Object.hasOwn(body, 'description')) changes.description = validated.description;
   if (Object.hasOwn(body, 'dueOn')) changes.dueOn = validated.dueOn;
   if (Object.hasOwn(body, 'repeatEveryDays')) changes.repeatEveryDays = validated.repeatEveryDays;
   if (Object.hasOwn(body, 'reminderEnabled')) changes.reminderEnabled = validated.reminderEnabled;

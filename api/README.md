@@ -583,8 +583,8 @@ ignorar respostas de fotografias que já foram trocadas.
 
 Ao aceitar um cuidado, o utilizador pode rever a sugestão e escolher a data,
 o lembrete e a repetição antes de enviar `POST /tasks`. Essa rota aceita
-`dueOn`, `reminderEnabled` e `repeatEveryDays`. A descrição sugerida
-ainda não é persistida pelo modelo de cuidados.
+`dueOn`, `reminderEnabled` e `repeatEveryDays`. Envia a descrição revista em `description` (opcional, até 1000 caracteres).
+O campo `notes` fica reservado às observações da conclusão.
 
 A rota limita a 10 pedidos por utilizador a cada 15 minutos (`429`).
 Uma falha na chamada ou resposta do Gemini devolve `502`. Configuração em
@@ -629,6 +629,11 @@ Os fixtures de objetos/fotografias foram atualizados para o modelo real de taref
 Conclusão e histórico estão implementados na secção seguinte. Ainda pendentes: edição/eliminação da tarefa e filtro por estado ou
 objeto, repetição, lembretes e associação a dicas. Esta etapa não implementa nem agenda
 notificações. O Flutter ainda precisa do formulário e serviço de cuidados.
+
+A criação e a edição de cuidados pendentes aceitam `description`, um texto
+opcional até 1000 caracteres. Envia `""` para limpar. Cuidados antigos sem o
+campo devolvem `""`. A próxima ocorrência de um cuidado recorrente herda a
+descrição e começa com as observações de conclusão vazias.
 
 ## Concluir cuidados e consultar histórico — EDT 4.4.2
 

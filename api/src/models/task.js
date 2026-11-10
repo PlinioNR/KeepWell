@@ -20,8 +20,8 @@ export function validateTaskDate(dueOn) {
 
 export function buildTask(body, userId) {
   if (!body || typeof body !== 'object' || Array.isArray(body) ||
-      Object.keys(body).some(key => !['objectId', 'title', 'dueOn', 'repeatEveryDays', 'reminderEnabled'].includes(key))) {
-    throw Object.assign(new Error('Envia apenas objectId, title, dueOn, repeatEveryDays e reminderEnabled.'), { status: 400 });
+      Object.keys(body).some(key => !['objectId', 'title', 'description', 'dueOn', 'repeatEveryDays', 'reminderEnabled'].includes(key))) {
+    throw Object.assign(new Error('Envia apenas objectId, title, description, dueOn, repeatEveryDays e reminderEnabled.'), { status: 400 });
   }
   if (typeof body.objectId !== 'string' || !/^[a-f0-9]{24}$/i.test(body.objectId)) {
     throw Object.assign(new Error('Seleciona um objeto válido.'), { status: 400 });
@@ -33,6 +33,11 @@ export function buildTask(body, userId) {
   if ([...title].length < 2 || [...title].length > 120) {
     throw Object.assign(new Error('O título deve ter entre 2 e 120 caracteres.'), { status: 400 });
   }
+  const rawDescription = body.description === undefined ? '' : body.description;
+  if (typeof rawDescription !== 'string' || [...rawDescription.trim()].length > 1000) {
+    throw Object.assign(new Error('A descrição do cuidado deve ser texto com até 1000 caracteres.'), { status: 400 });
+  }
+  const description = rawDescription.trim();
   const dueOn = validateTaskDate(body.dueOn);
   const reminderEnabled = body.reminderEnabled === undefined ? false : body.reminderEnabled;
   if (typeof reminderEnabled !== 'boolean') {
@@ -46,12 +51,13 @@ export function buildTask(body, userId) {
   if (!(userId instanceof ObjectId)) throw new Error('Utilizador autenticado inválido.');
   const now = new Date();
   // Estado e datas internas são definidos pelo servidor, não pelo cliente.
-  return { objectId: new ObjectId(body.objectId), userId, title, dueOn, repeatEveryDays, reminderEnabled,
+  return { objectId: new ObjectId(body.objectId), userId, title, description, dueOn, repeatEveryDays, reminderEnabled,
     status: 'pending', completedAt: null, notes: '', createdAt: now, updatedAt: now };
 }
 
 export function toPublicTask(task) {
   return { id: task._id.toString(), objectId: task.objectId.toString(), title: task.title,
+    description: task.description ?? '',
     reminderEnabled: task.reminderEnabled ?? false,
     dueOn: task.dueOn, repeatEveryDays: task.repeatEveryDays ?? null, status: task.status, completedAt: task.completedAt, notes: task.notes ?? '',
     createdAt: task.createdAt, updatedAt: task.updatedAt };
@@ -68,6 +74,7 @@ export async function setupTasks(database) {
         dueOn: { bsonType: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
         reminderEnabled: { bsonType: 'bool' },
         repeatEveryDays: { bsonType: ['int', 'null'], minimum: 1, maximum: 365 },
+        description: { bsonType: 'string', maxLength: 1000 },
         notes: { bsonType: 'string', maxLength: 1000 },
         status: { enum: ['pending', 'completed'] }, completedAt: { bsonType: ['date', 'null'] },
         createdAt: { bsonType: 'date' }, updatedAt: { bsonType: 'date' }

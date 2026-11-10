@@ -170,7 +170,7 @@ try {
   const afterDelete = await fetch(`${objectsUrl}/${object.id}`, auth(0));
   assert.equal((await afterDelete.json()).object.nextCare, null);
   assert.equal((await request(0, 'GET', `/${editable.id}`)).status, 404);
-  const recurring = await createTask({ ...valid, title: 'Limpar mensalmente', repeatEveryDays: 30, reminderEnabled: true }, userIds[0]);
+  const recurring = await createTask({ ...valid, title: 'Limpar mensalmente', description: '  Limpar com pano seco.  ', repeatEveryDays: 30, reminderEnabled: true }, userIds[0]);
   assert.equal((await request(0, 'POST', '', { ...valid, repeatEveryDays: 0 })).status, 400);
   const recurringResponses = await Promise.all([0, 1].map(() =>
     request(0, 'POST', '/' + recurring.id + '/complete', { notes: 'Feito' })
@@ -185,6 +185,7 @@ try {
   const expectedDate = new Date(day + 'T00:00:00Z');
   expectedDate.setUTCDate(expectedDate.getUTCDate() + 30);
   assert.equal(successors[0].dueOn, expectedDate.toISOString().slice(0, 10));
+  assert.equal(successors[0].description, 'Limpar com pano seco.');
   assert.equal(successors[0].notes, '');
   assert.equal(successors[0].repeatEveryDays, 30);
   assert.equal(successors[0].reminderEnabled, true);
@@ -218,10 +219,11 @@ try {
   assert.deepEqual(reminderPage.tasks.map(task => task.id), [successors[0]._id.toString()]);
   assert.equal((await request(0, 'GET', '/reminders?pageSize=0')).status, 400);
   const successorPath = '/' + successors[0]._id;
-  const disabled = await request(0, 'PATCH', successorPath, { repeatEveryDays: null });
+  const disabled = await request(0, 'PATCH', successorPath, { repeatEveryDays: null, description: '  Usar um pano macio.  ' });
   assert.equal(disabled.status, 200);
   const disabledTask = (await disabled.json()).task;
   assert.equal(disabledTask.repeatEveryDays, null);
+  assert.equal(disabledTask.description, 'Usar um pano macio.');
   assert.equal(disabledTask.reminderEnabled, true);
   assert.equal((await request(0, 'PATCH', successorPath, { reminderEnabled: 'false' })).status, 400);
   const withoutReminder = await request(0, 'PATCH', successorPath, { reminderEnabled: false });
