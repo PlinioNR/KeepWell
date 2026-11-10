@@ -17,7 +17,7 @@ try {
   await connectDatabase();
   server = app.listen({ port, host }, () => {
     const { address } = server.address();
-    console.log('API KeepWell a escutar em ' + address + ' (porta ' + port + ').');
+    console.log('API KeepWell a executar em ' + address + ' (porta ' + port + ').');
   });
 
   server.on('error', async (error) => {

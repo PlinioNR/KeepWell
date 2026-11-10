@@ -74,8 +74,8 @@ app.use((error, _req, res, _next) => {
     return res.status(413).json({ error: 'O corpo do pedido excede o tamanho permitido.' });
   }
 
-  // Só estes códigos são usados pelos erros previstos de validação/registo.
-  if ([400, 401, 403, 404, 409, 413, 415, 503].includes(error.status)) {
+  // Estes códigos correspondem a erros previstos pela API.
+  if ([400, 401, 403, 404, 409, 413, 415, 502, 503, 504].includes(error.status)) {
     return res.status(error.status).json({ error: error.message });
   }
 
