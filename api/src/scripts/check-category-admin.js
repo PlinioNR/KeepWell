@@ -83,16 +83,43 @@ try {
   assert.equal(updated.createdAt, created.createdAt);
   assert.equal(updated.name, `Editada-${marker}`);
   assert.equal((await request('PATCH', `/${new ObjectId()}`, { name })).status, 404);
+  const tipsUrl = 'http://127.0.0.1:' + server.address().port + '/tips';
+  const tipRequest = (method, path = '', body) => fetch(tipsUrl + path, {
+    method,
+    headers: { Authorization: 'Bearer ' + login.token, 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body)
+  });
+  const tipInput = { categoryId: created.id, title: 'Limpar o filtro', text: 'Secar antes de montar.' };
+  assert.equal((await fetch(tipsUrl)).status, 401);
+  const tipResponse = await tipRequest('POST', '', tipInput);
+  assert.equal(tipResponse.status, 201);
+  const { tip } = await tipResponse.json();
+  const tipPath = '/' + tip.id;
+  assert.equal((await request('DELETE', '/' + created.id)).status, 409);
+  assert.equal((await tipRequest('PATCH', tipPath, { text: 'Texto atualizado.' })).status, 200);
+  await database.collection('users').updateOne({ _id: userId, email }, { $set: { role: 'user' } });
+  assert.equal((await tipRequest('POST', '', tipInput)).status, 403);
+  assert.equal((await tipRequest('PATCH', tipPath, { text: 'Outro texto' })).status, 403);
+  assert.equal((await tipRequest('DELETE', tipPath)).status, 403);
+  const matchingTips = await tipRequest('GET', '?categoryId=' + created.id + '&search=filtro');
+  assert.equal(matchingTips.status, 200);
+  const { tips } = await matchingTips.json();
+  assert.equal(tips.length, 1);
+  assert.equal(tips[0].text, 'Texto atualizado.');
+  await database.collection('users').updateOne({ _id: userId, email }, { $set: { role: 'admin' } });
+  assert.equal((await tipRequest('DELETE', tipPath)).status, 204);
+  assert.equal((await tipRequest('GET', tipPath)).status, 404);
   assert.equal((await request('DELETE', `/${created.id}`)).status, 204);
   assert.equal((await request('GET', `/${created.id}`)).status, 404);
   assert.equal((await request('DELETE', `/${created.id}`)).status, 404);
   await database.collection('users').updateOne({ _id: userId, email }, { $set: { role: 'user' } });
   assert.equal((await request('POST', '', { name })).status, 403);
-  console.log('CRUD verificado no Atlas: consulta, criação, edição, eliminação, duplicados, dados inválidos e permissões atuais.');
+  console.log('Categorias e dicas verificadas no Atlas: consulta, criação, edição, eliminação, duplicados, dados inválidos e permissões atuais.');
 } finally {
   if (database) {
     if (userId) await database.collection('objects').deleteMany({ userId });
     // Só ids devolvidos pela criação neste teste podem ser eliminados aqui.
+    if (categoryIds.length) await database.collection('tips').deleteMany({ categoryId: { $in: categoryIds } });
     if (categoryIds.length) await database.collection('categories').deleteMany({ _id: { $in: categoryIds } });
     // Em caso de resposta perdida, encontra apenas os nomes exclusivos deste teste.
     await database.collection('categories').deleteMany({ name: { $in: [name, `Editada-${marker}`] } });
@@ -107,5 +134,6 @@ try {
   if (server) await new Promise(resolve => server.close(resolve));
   await closeDatabase();
 }
+
 
 

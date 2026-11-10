@@ -538,6 +538,59 @@ upload, acesso por dono, substituição, remoção e limpeza ao eliminar o objet
 os dados e ficheiros do teste no final. A captura pela câmara/galeria e a apresentação
 da fotografia no Flutter ainda não foram implementadas nesta etapa.
 
+## Análise de fotografias com Gemini
+
+`POST /objects/photo-analysis` requer um token Bearer e recebe um único ficheiro
+`photo` em `multipart/form-data` (JPEG, PNG ou WebP estático, até 5 MiB).
+Pode ser usado antes de criar o objeto. O backend valida e normaliza a imagem
+em memória, remove metadados e envia a imagem e o catálogo de categorias ao Gemini.
+A rota não grava a imagem, o objeto ou os cuidados.
+
+Configura estas variáveis no `api/.env` local e reinicia a API.
+
+```dotenv
+GEMINI_API_KEY="cola_a_tua_chave_aqui"
+GEMINI_MODEL=gemini-3.1-flash-lite
+```
+
+A chave é criada no [Google AI Studio](https://aistudio.google.com/apikey)
+e fica apenas no ambiente do backend. Mantém o `.env` fora do Git.
+
+Com a API a correr e um `$token` válido, testa no PowerShell.
+
+```powershell
+$caminhoFoto = "C:\Users\rafae\Downloads\foto.jpg"
+curl.exe -i "http://localhost:3000/objects/photo-analysis" -H "Authorization: Bearer $token" -F "photo=@$caminhoFoto"
+```
+
+O `200 OK` devolve o nome, o ID de uma categoria do catálogo e até quatro
+sugestões com título e descrição. Exemplo de resposta.
+
+```json
+{
+  "object": { "name": "Bicicleta", "categoryId": "507f1f77bcf86cd799439011" },
+  "suggestedTasks": [
+    { "title": "Lubrificar a corrente", "description": "Limpar e lubrificar a corrente." }
+  ]
+}
+```
+
+O nome e a categoria podem vir como `null`, e as sugestões podem vir vazias.
+No Flutter, a categoria sugerida pode ser pré-selecionada pelo ID se ainda
+estiver no catálogo e o utilizador não tiver escolhido outra. A interface deve
+informar que a foto será processada pelo Google, preservar edições manuais e
+ignorar respostas de fotografias que já foram trocadas.
+
+Ao aceitar um cuidado, o utilizador pode rever a sugestão e escolher a data,
+o lembrete e a repetição antes de enviar `POST /tasks`. Essa rota aceita
+`dueOn`, `reminderEnabled` e `repeatEveryDays`. Envia a descrição revista em `description` (opcional, até 1000 caracteres).
+O campo `notes` fica reservado às observações da conclusão.
+
+A rota limita a 10 pedidos por utilizador a cada 15 minutos (`429`).
+Uma falha na chamada ou resposta do Gemini devolve `502`. Configuração em
+falta devolve `503`. Exceder os 15 segundos da chamada ao Gemini devolve
+`504`. O formulário deve permitir continuar manualmente.
+
 ## Cuidados/tarefas — EDT 4.2.4 e primeira etapa de 4.4.2
 
 Uma tarefa pertence a um objeto e ao seu dono. Coleção tasks com _id, objectId e
@@ -577,6 +630,11 @@ Conclusão e histórico estão implementados na secção seguinte. Ainda pendent
 objeto, repetição, lembretes e associação a dicas. Esta etapa não implementa nem agenda
 notificações. O Flutter ainda precisa do formulário e serviço de cuidados.
 
+A criação e a edição de cuidados pendentes aceitam `description`, um texto
+opcional até 1000 caracteres. Envia `""` para limpar. Cuidados antigos sem o
+campo devolvem `""`. A próxima ocorrência de um cuidado recorrente herda a
+descrição e começa com as observações de conclusão vazias.
+
 ## Concluir cuidados e consultar histórico — EDT 4.4.2
 
 POST /tasks/:id/complete exige Bearer e Content-Type application/json.
@@ -592,13 +650,21 @@ Pedidos repetidos, incluindo simultâneos, devolvem a conclusão existente sem a
 data, observações ou criar outro registo. Novas observações enviadas depois da primeira
 conclusão não substituem as originais. Reabertura/edição de concluídos não existe nesta etapa.
 
-GET /objects/:id/history exige o dono do objeto. Devolve apenas tarefas completed,
-ordenadas por completedAt descendente e id como desempate. Paginação page=1 e pageSize=20,
-máximo pageSize=100. Resposta {tasks:[...],page,pageSize,total}. A contagem e a consulta
-podem refletir momentos próximos mas diferentes durante alterações concorrentes.
-Não existe coleção history duplicada: o histórico consulta tasks pelo estado.
-O evento "Objeto adicionado" do protótipo não é incluído nesta rota nesta etapa;
-a data de criação do objeto continua disponível no detalhe do objeto.
+GET /objects/:id/history exige o dono do objeto. A resposta inclui
+`{ tasks, events, page, pageSize, total }`. A lista `tasks` mantém os cuidados
+concluídos, do mais recente ao mais antigo, com desempate pelo ID. A paginação
+usa `page=1` e `pageSize=20` por defeito, com máximo de 100 por página.
+O campo `total` conta apenas os cuidados concluídos.
+
+- `care_completed` traz `occurredAt` (data de conclusão) e `task`, com título e observações.
+- `object_added` traz `occurredAt` (data de criação do objeto). Aparece uma vez na
+  última página de cuidados, ou na primeira quando não há cuidados concluídos.
+  É um evento adicional e pode fazer com que a última página de `events` tenha
+  mais uma entrada do que `pageSize`.
+
+A linha do tempo é montada com os cuidados concluídos e a data de criação
+guardada no objeto. A consulta e a contagem podem refletir momentos ligeiramente
+diferentes durante alterações concorrentes.
 
 Erros: 400 para dados/identificadores/paginação inválidos; 401 sem sessão; 404 para
 cuidado/objeto inexistente ou alheio; 415 para conclusão sem tipo JSON. Histórico vazio
@@ -625,3 +691,124 @@ Invoke-RestMethod -Uri "http://localhost:3000/objects/$idObjeto/history" -Header
 Pendentes: editar/eliminar tarefas, filtros por objeto/estado, repetição, lembretes,
 dicas e integração dos cuidados com o Flutter. Nenhum lembrete é agendado por esta operação.
 
+
+### Edição, eliminação e filtros de cuidados
+
+- PATCH /tasks/:id recebe title, dueOn ou ambos e devolve 200 com task.
+- DELETE /tasks/:id elimina o cuidado e devolve 204.
+- As duas alterações exigem uma sessão do dono e estado pending. Um cuidado concluído
+  devolve 409 para preservar o histórico. Inexistente ou alheio devolve 404.
+- GET /tasks aceita objectId e status em conjunto com page e pageSize.
+  pending inclui cuidados previstos para hoje ou depois, overdue inclui pendentes
+  com data anterior a hoje, completed inclui concluídos. Hoje segue Europe/Lisbon.
+  Omitir status lista todos. Atraso é calculado na consulta, sem alterar o estado guardado.
+
+### Dicas de conservação
+
+GET /tips aceita categoryId, search (parte literal do título), page e pageSize.
+Devolve tips, page, pageSize e total. GET /tips/:id devolve tip.
+Ambas as consultas exigem sessão.
+
+POST /tips recebe title (2–120 caracteres), text (1–3000 caracteres) e categoryId.
+PATCH /tips/:id aceita alterações parciais a esses campos. DELETE /tips/:id devolve
+204. As três operações exigem administrador. A categoria tem de existir e a sua
+eliminação devolve 409 enquanto houver dicas associadas.
+
+Executa npm.cmd run db:setup para preparar a coleção tips.
+
+GET /tasks aceita dueFrom e dueTo em AAAA-MM-DD. Cada limite é opcional e inclusivo.
+Os limites combinam com status, objectId e paginação. O total conta os cuidados que
+correspondem a todos os filtros antes da paginação. Datas inválidas ou invertidas
+devolvem 400. Para os próximos cuidados da semana, usa status=pending e dueTo com
+a data de domingo.
+
+GET /objects e GET /objects/:id devolvem nextCare em cada objeto. Contém id, title
+e dueOn do primeiro cuidado pendente com data de hoje ou posterior, ou null se
+não houver nenhum. A seleção usa o calendário de Lisboa e desempata por id.
+
+POST /tasks e PATCH /tasks/:id aceitam repeatEveryDays. Usa um inteiro de 1 a 365
+para repetir ou null para desativar. Omitir no PATCH preserva a configuração.
+Ao concluir, a API cria o próximo cuidado a partir do dia da conclusão em Lisboa,
+mantendo objeto, título e intervalo. A conclusão e a criação são atómicas. Repetir
+o pedido de conclusão não cria outro cuidado. Executa db:setup antes de usar.
+
+PATCH /auth/me/preferences aceita theme (system, light ou dark) e/ou
+remindersEnabled (booleano), exige sessão e devolve user. GET /auth/me e o
+login incluem user.preferences. Os valores por defeito são system e false.
+A preferência de lembretes pode ser lida pela app para configurar notificações.
+Executa npm.cmd run db:setup para atualizar a validação no Atlas.
+
+POST /tasks e PATCH /tasks/:id aceitam reminderEnabled (true ou false).
+O valor por defeito é false. Omitir o campo no PATCH preserva a escolha.
+A próxima ocorrência de um cuidado recorrente herda a preferência.
+O Flutter pode agendar um lembrete local quando user.preferences.remindersEnabled
+e task.reminderEnabled forem true e o cuidado estiver pendente.
+Executa npm.cmd run db:setup para atualizar a validação.
+
+PATCH /auth/me recebe apenas name e devolve user. Exige sessão da própria conta
+e aplica a mesma regra do registo: 2 a 100 caracteres após remover espaços das
+extremidades. GET /auth/me devolve o nome atualizado.
+
+PATCH /auth/me/email recebe email (novo endereço) e password (palavra-passe atual).
+Exige sessão, normaliza o endereço como no login e devolve 200 com user.
+Uma palavra-passe errada devolve 401, dados inválidos devolvem 400 e um email
+ocupado devolve 409. O índice único também protege contra alterações simultâneas.
+Há um limite de 10 pedidos por IP em 15 minutos. As sessões são ligadas ao ID
+da conta e continuam válidas. O próximo login usa o endereço novo.
+
+Decisão da primeira versão: basta a palavra-passe atual. Reavaliar a confirmação
+da posse do novo endereço por email numa versão futura.
+
+GET /tasks/reminders exige sessão e aceita page e pageSize. Devolve tasks,
+page, pageSize e total. Inclui apenas cuidados da conta com reminderEnabled
+ativo, pendentes e previstos para hoje ou depois no calendário de Lisboa.
+Quando a preferência geral de lembretes está desligada, a lista vem vazia.
+O cliente pode usar esta consulta como entrada para o agendamento local.
+
+GET /notifications exige sessão e devolve dueToday, overdue e recent com até
+20 itens por grupo. Os dois primeiros usam cuidados pendentes e a data de Lisboa.
+recent junta conclusões e objetos adicionados, ordenados por occurredAt desc.
+Cada item inclui type, id e objectId, e itens de cuidado incluem taskId e dueOn.
+A lista é calculada na leitura a partir de tasks e objects. As preferências de
+lembrete continuam a ser usadas pela rota de agendamento GET /tasks/reminders.
+
+O comando npm.cmd run seed:demo prepara contas, categorias, objetos, cuidados
+e dicas de demonstração. Reutiliza os registos encontrados pelo dono, nome e
+categoria ou objeto correspondente, preservando os IDs dos objetos. Na primeira
+execução cria exemplos para hoje, em atraso, futuros, recorrentes e concluídos.
+As datas dos exemplos já existentes seguem o percurso normal dos cuidados.
+
+Para usar uma pasta persistente fora do código, define PHOTO_DIRECTORY no .env
+com um caminho absoluto, por exemplo C:/KeepWell/dados/fotografias. Sem esta
+variável, a API usa api/storage/object-photos/. Ao mudar de pasta, copia os
+ficheiros existentes mantendo os nomes antes de reiniciar a API. As referências
+guardadas no MongoDB continuam a usar as mesmas chaves. Usa uma pasta privada
+com permissão de leitura e escrita para o processo da API.
+
+GET /health/storage exige uma sessão de administrador. A API escreve, lê e
+remove um ficheiro temporário na pasta de fotografias. Devolve 200 com storage
+available quando o teste passa, ou 503 com storage unavailable se falhar.
+A resposta não expõe o caminho da pasta.
+
+HOST no .env permite escolher onde a API escuta. 127.0.0.1 limita ao PC.
+0.0.0.0 permite escutar nas interfaces IPv4. Num telemóvel na mesma rede,
+usa o IP local do PC com a porta configurada, por exemplo
+http://192.168.1.10:3000. Se HOST for omitido, o Node usa a escuta padrão.
+O endereço de escuta e a porta aparecem no terminal ao arrancar.
+
+Na pasta api, npm.cmd run test:backend executa os testes locais e as seis
+suites de integração existentes, incluindo categorias e dicas na mesma suite.
+Mostra um resumo no fim e termina com código diferente de zero se alguma falhar.
+As integrações usam o Atlas configurado no .env e removem os seus dados de teste.
+O seed de demonstração é executado separadamente.
+
+npm.cmd run check:photos compara as chaves de fotografia no MongoDB com os
+ficheiros na pasta configurada. Lista referências sem ficheiro e ficheiros
+gerados pela API sem referência. O comando é apenas de leitura e termina com
+código 1 se encontrar diferenças. Executa-o sem uploads ou eliminações em curso
+para evitar diferenças transitórias.
+
+GET /tasks, GET /tasks/:id, GET /tasks/reminders e GET /objects/:id/history
+incluem objectName em cada cuidado. O nome é obtido do objeto atual, sem o
+duplicar no documento da tarefa. Se a referência não puder ser resolvida na
+conta autenticada, a listagem e o detalhe devolvem objectName: null.

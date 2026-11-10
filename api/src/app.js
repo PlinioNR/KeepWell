@@ -1,3 +1,6 @@
+import { requireAuth } from './middleware/require-auth.js';
+import { requireAdmin } from './middleware/require-admin.js';
+import { checkPhotoStorage } from './storage/photo-files.js';
 import multer from 'multer';
 import express from 'express';
 import { pingDatabase } from './database.js';
@@ -5,6 +8,8 @@ import authRoutes from './routes/auth.js';
 import categoryRoutes from './routes/categories.js';
 import objectRoutes from './routes/objects.js';
 import taskRoutes from './routes/tasks.js';
+import tipRoutes from './routes/tips.js';
+import notificationRoutes from './routes/notifications.js';
 
 // O Express recebe os pedidos HTTP e permite definir as rotas da API.
 const app = express();
@@ -28,11 +33,24 @@ app.get('/health/database', async (_req, res) => {
   }
 });
 
+// A verificação escreve no disco, por isso exige uma sessão de administrador.
+app.get('/health/storage', requireAuth, requireAdmin, async (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  try {
+    await checkPhotoStorage();
+    res.status(200).json({ status: 'ok', storage: 'available' });
+  } catch {
+    res.status(503).json({ status: 'error', storage: 'unavailable' });
+  }
+});
+
 // Agrupa as rotas de conta no prefixo /auth.
 app.use('/auth', authRoutes);
 app.use('/categories', categoryRoutes);
 app.use('/objects', objectRoutes);
 app.use('/tasks', taskRoutes);
+app.use('/tips', tipRoutes);
+app.use('/notifications', notificationRoutes);
 
 // Devolve JSON também quando o cliente pede uma rota que não existe.
 app.use((_req, res) => {
@@ -56,8 +74,8 @@ app.use((error, _req, res, _next) => {
     return res.status(413).json({ error: 'O corpo do pedido excede o tamanho permitido.' });
   }
 
-  // Só estes códigos são usados pelos erros previstos de validação/registo.
-  if ([400, 401, 403, 404, 409, 413, 415, 503].includes(error.status)) {
+  // Estes códigos correspondem a erros previstos pela API.
+  if ([400, 401, 403, 404, 409, 413, 415, 502, 503, 504].includes(error.status)) {
     return res.status(error.status).json({ error: error.message });
   }
 
@@ -67,6 +85,9 @@ app.use((error, _req, res, _next) => {
 
 
 export default app;
+
+
+
 
 
 

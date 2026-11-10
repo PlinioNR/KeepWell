@@ -1,3 +1,4 @@
+import { buildTaskFilter } from './tasks.js';
 import { removePhotoFile } from '../storage/photo-files.js';
 import { ObjectId } from 'mongodb';
 import { getDatabase, withDatabaseTransaction } from '../database.js';
@@ -69,6 +70,21 @@ export function parseObjectFilters(query = {}, userId) {
   return filter;
 }
 
+async function objectsWithNextCare(objects, userId) {
+  if (!objects.length) return [];
+  const filter = buildTaskFilter(userId, { status: 'pending' });
+  // Uma consulta para todos os objetos da página.
+  const next = await getDatabase().collection('tasks').aggregate([
+    { $match: { ...filter, objectId: { $in: objects.map(object => object._id) } } },
+    { $sort: { dueOn: 1, _id: 1 } },
+    { $group: { _id: '$objectId', task: { $first: { id: { $toString: '$_id' }, title: '$title', dueOn: '$dueOn' } } } }
+  ]).toArray();
+  const byObject = new Map(next.map(({ _id, task }) => [_id.toString(), task]));
+  return objects.map(object => ({
+    ...toPublicObject(object), nextCare: byObject.get(object._id.toString()) ?? null
+  }));
+}
+
 export async function listObjects(userId, query = {}) {
   const { page, pageSize } = parseObjectPagination(query);
   const collection = getDatabase().collection('objects');
@@ -78,14 +94,15 @@ export async function listObjects(userId, query = {}) {
     collection.find(filter).sort({ createdAt: -1, _id: -1 }).skip((page - 1) * pageSize).limit(pageSize).toArray(),
     collection.countDocuments(filter)
   ]);
-  return { objects: objects.map(toPublicObject), page, pageSize, total };
+  return { objects: await objectsWithNextCare(objects, userId), page, pageSize, total };
 }
 
 export async function getObject(id, userId) {
   const object = await getDatabase().collection('objects').findOne({ _id: parseObjectId(id), userId });
   // Mesma resposta para inexistente ou de outra pessoa: não revela os seus dados.
   if (!object) throw Object.assign(new Error('Objeto não encontrado.'), { status: 404 });
-  return toPublicObject(object);
+  const [result] = await objectsWithNextCare([object], userId);
+  return result;
 }
 
 export async function updateObject(id, body, userId) {
@@ -142,6 +159,7 @@ export async function deleteObject(id, userId) {
   // Só remove a imagem depois da eliminação do objeto ser confirmada.
   await removePhotoFile(photoKey);
 }
+
 
 
 

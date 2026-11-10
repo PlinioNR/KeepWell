@@ -7,7 +7,7 @@ import { registerUser } from '../services/registration.js';
 import { loginUser } from '../services/authentication.js';
 import { createCategory } from '../services/categories.js';
 import { createObject, deleteObject } from '../services/objects.js';
-import { createTask } from '../services/tasks.js';
+import { createTask, lisbonDate } from '../services/tasks.js';
 import { buildTask } from '../models/task.js';
 
 const marker = randomUUID();
@@ -45,6 +45,7 @@ try {
   assert.equal(response.status, 201, JSON.stringify(created));
   assert.equal(response.headers.get('location'), `/tasks/${created.task.id}`);
   assert.equal(created.task.status, 'pending');
+  assert.equal(created.task.reminderEnabled, false);
   assert.equal(created.task.completedAt, null);
   assert.ok(!('userId' in created.task));
   const saved = await database.collection('tasks').findOne({ _id: new ObjectId(created.task.id) });
@@ -98,7 +99,12 @@ try {
   assert.equal(history.total, 1);
   assert.equal(history.tasks[0].id, completed.id);
   assert.equal(history.tasks[0].notes, completed.notes);
+  assert.equal(history.tasks[0].objectName, object.name);
   assert.equal(history.tasks[0].status, 'completed');
+  assert.deepEqual(history.events, [
+    { type: 'care_completed', occurredAt: completed.completedAt, task: history.tasks[0] },
+    { type: 'object_added', occurredAt: object.createdAt.toISOString() }
+  ]);
   const parallel = await Promise.all([
     request(0, 'POST', `/${second.id}/complete`, {}),
     request(0, 'POST', `/${second.id}/complete`, {})
@@ -115,9 +121,133 @@ try {
   assert.notEqual(firstPage.tasks[0].id, secondPage.tasks[0].id);
   assert.ok(Date.parse(firstPage.tasks[0].completedAt) >= Date.parse(secondPage.tasks[0].completedAt));
   const emptyHistory = await fetch(`http://127.0.0.1:${server.address().port}/objects/${otherObject.id}/history`, auth(1));
-  assert.equal((await emptyHistory.json()).total, 0);
+  const emptyHistoryBody = await emptyHistory.json();
+  assert.equal(emptyHistoryBody.total, 0);
+  assert.deepEqual(emptyHistoryBody.events, [{ type: 'object_added', occurredAt: otherObject.createdAt.toISOString() }]);
   assert.equal((await fetch(historyUrl + '?pageSize=101', auth(0))).status, 400);
   await assert.rejects(deleteObject(object.id, userIds[0]), { status: 409 });
+  const editable = await createTask({ ...valid, dueOn: '2099-01-01' }, userIds[0]);
+  const overdue = await createTask({ ...valid, dueOn: '2000-01-01' }, userIds[0]);
+  assert.equal((await request(1, 'PATCH', `/${editable.id}`, { title: 'Outro título' })).status, 404);
+  assert.equal((await request(1, 'DELETE', `/${editable.id}`)).status, 404);
+  assert.equal((await request(0, 'PATCH', `/${editable.id}`, { dueOn: '2026-02-30' })).status, 400);
+  const edit = await request(0, 'PATCH', `/${editable.id}`, { title: 'Filtro novo' });
+  assert.equal(edit.status, 200);
+  const edited = (await edit.json()).task;
+  assert.equal(edited.title, 'Filtro novo');
+  assert.equal(edited.dueOn, editable.dueOn);
+  assert.equal((await request(0, 'PATCH', `/${completed.id}`, { title: 'Outro título' })).status, 409);
+  assert.equal((await request(0, 'DELETE', `/${completed.id}`)).status, 409);
+  for (const [status, id] of [['pending', editable.id], ['overdue', overdue.id]]) {
+    const filtered = await request(0, 'GET', `?status=${status}&objectId=${object.id}`);
+    assert.equal(filtered.status, 200);
+    assert.deepEqual((await filtered.json()).tasks.map(task => task.id), [id]);
+  }
+  assert.equal((await (await request(0, 'GET', '?status=completed')).json()).total, 2);
+  assert.equal((await request(0, 'GET', '?status=pending&status=overdue')).status, 400);
+  const exact = await request(0, 'GET', '?status=pending&dueFrom=2099-01-01&dueTo=2099-01-01');
+  assert.equal(exact.status, 200);
+  assert.deepEqual((await exact.json()).tasks.map(task => task.id), [editable.id]);
+  for (const query of [
+    '?status=pending&dueTo=2000-01-01',
+    '?status=overdue&dueFrom=2099-01-01',
+    '?status=pending&dueFrom=2099-01-02'
+  ]) {
+    const filtered = await request(0, 'GET', query);
+    assert.equal(filtered.status, 200);
+    assert.equal((await filtered.json()).total, 0);
+  }
+  assert.equal((await request(0, 'GET', '?dueFrom=2026-02-30')).status, 400);
+  assert.equal((await request(0, 'GET', '?dueFrom=2026-12-01&dueTo=2026-11-01')).status, 400);
+  const objectsUrl = `http://127.0.0.1:${server.address().port}/objects`;
+  const detail = await fetch(`${objectsUrl}/${object.id}`, auth(0));
+  assert.deepEqual((await detail.json()).object.nextCare, {
+    id: editable.id, title: 'Filtro novo', dueOn: '2099-01-01'
+  });
+  const objectPage = await fetch(objectsUrl, auth(0));
+  assert.equal((await objectPage.json()).objects.find(item => item.id === object.id).nextCare.id, editable.id);
+  assert.equal((await request(0, 'DELETE', `/${editable.id}`)).status, 204);
+  const afterDelete = await fetch(`${objectsUrl}/${object.id}`, auth(0));
+  assert.equal((await afterDelete.json()).object.nextCare, null);
+  assert.equal((await request(0, 'GET', `/${editable.id}`)).status, 404);
+  const recurring = await createTask({ ...valid, title: 'Limpar mensalmente', description: '  Limpar com pano seco.  ', repeatEveryDays: 30, reminderEnabled: true }, userIds[0]);
+  assert.equal((await request(0, 'POST', '', { ...valid, repeatEveryDays: 0 })).status, 400);
+  const recurringResponses = await Promise.all([0, 1].map(() =>
+    request(0, 'POST', '/' + recurring.id + '/complete', { notes: 'Feito' })
+  ));
+  assert.ok(recurringResponses.every(response => response.status === 200));
+  const successors = await database.collection('tasks').find({
+    objectId: new ObjectId(object.id), title: recurring.title, status: 'pending'
+  }).toArray();
+  assert.equal(successors.length, 1);
+  const completion = (await recurringResponses[0].json()).task;
+  const day = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Lisbon' }).format(new Date(completion.completedAt));
+  const expectedDate = new Date(day + 'T00:00:00Z');
+  expectedDate.setUTCDate(expectedDate.getUTCDate() + 30);
+  assert.equal(successors[0].dueOn, expectedDate.toISOString().slice(0, 10));
+  assert.equal(successors[0].description, 'Limpar com pano seco.');
+  assert.equal(successors[0].notes, '');
+  assert.equal(successors[0].repeatEveryDays, 30);
+  assert.equal(successors[0].reminderEnabled, true);
+  assert.equal((await fetch(base + '/reminders')).status, 401);
+  const remindersOff = await request(0, 'GET', '/reminders');
+  assert.equal(remindersOff.status, 200);
+  assert.equal((await remindersOff.json()).total, 0);
+  await database.collection('users').updateOne({ _id: userIds[0] }, { $set: { 'preferences.remindersEnabled': true } });
+  await database.collection('tasks').updateOne({ _id: new ObjectId(overdue.id) }, { $set: { reminderEnabled: true } });
+  await createTask({ ...valid, objectId: otherObject.id, dueOn: '2099-01-01', reminderEnabled: true }, userIds[1]);
+  const remindersOn = await request(0, 'GET', '/reminders?pageSize=1');
+  assert.equal(remindersOn.status, 200);
+  const reminderPage = await remindersOn.json();
+  assert.equal(reminderPage.tasks[0].objectName, object.name);
+  const details = await request(0, 'GET', '/' + completed.id);
+  assert.equal(details.status, 200);
+  assert.equal((await details.json()).task.objectName, object.name);
+  await database.collection('objects').updateOne(
+    { _id: new ObjectId(object.id), userId: userIds[0] },
+    { $set: { name: 'Nome atualizado no teste' } }
+  );
+  const renamedList = await request(0, 'GET', '?objectId=' + object.id);
+  const renamedTasks = (await renamedList.json()).tasks;
+  assert.ok(renamedTasks.length > 0);
+  assert.ok(renamedTasks.every(task => task.objectName === 'Nome atualizado no teste'));
+  await database.collection('objects').updateOne(
+    { _id: new ObjectId(object.id), userId: userIds[0] },
+    { $set: { name: object.name } }
+  );
+  assert.equal(reminderPage.total, 1);
+  assert.deepEqual(reminderPage.tasks.map(task => task.id), [successors[0]._id.toString()]);
+  assert.equal((await request(0, 'GET', '/reminders?pageSize=0')).status, 400);
+  const successorPath = '/' + successors[0]._id;
+  const disabled = await request(0, 'PATCH', successorPath, { repeatEveryDays: null, description: '  Usar um pano macio.  ' });
+  assert.equal(disabled.status, 200);
+  const disabledTask = (await disabled.json()).task;
+  assert.equal(disabledTask.repeatEveryDays, null);
+  assert.equal(disabledTask.description, 'Usar um pano macio.');
+  assert.equal(disabledTask.reminderEnabled, true);
+  assert.equal((await request(0, 'PATCH', successorPath, { reminderEnabled: 'false' })).status, 400);
+  const withoutReminder = await request(0, 'PATCH', successorPath, { reminderEnabled: false });
+  assert.equal(withoutReminder.status, 200);
+  assert.equal((await withoutReminder.json()).task.reminderEnabled, false);
+  assert.equal((await request(0, 'POST', successorPath + '/complete', {})).status, 200);
+  assert.equal(await database.collection('tasks').countDocuments({
+    objectId: new ObjectId(object.id), title: recurring.title, status: 'pending'
+  }), 0);
+  const todayTask = await createTask({ ...valid, title: 'Cuidado para hoje', dueOn: lisbonDate(new Date()) }, userIds[0]);
+  const notificationsUrl = 'http://127.0.0.1:' + server.address().port + '/notifications';
+  assert.equal((await fetch(notificationsUrl)).status, 401);
+  const notificationResponse = await fetch(notificationsUrl, auth(0));
+  assert.equal(notificationResponse.status, 200);
+  assert.equal(notificationResponse.headers.get('cache-control'), 'no-store');
+  const notifications = await notificationResponse.json();
+  assert.deepEqual(notifications.dueToday.map(item => item.taskId), [todayTask.id]);
+  assert.ok(notifications.overdue.some(item => item.taskId === overdue.id));
+  assert.ok(!notifications.overdue.some(item => item.taskId === completed.id));
+  assert.ok(notifications.recent.some(item => item.type === 'taskCompleted' && item.taskId === completed.id));
+  assert.ok(notifications.recent.some(item => item.type === 'objectAdded' && item.objectId === object.id));
+  assert.ok(Object.values(notifications).flat().every(item => item.objectId !== otherObject.id));
+  const otherFeed = await (await fetch(notificationsUrl, auth(1))).json();
+  assert.ok(Object.values(otherFeed).flat().every(item => item.objectId !== object.id));
   const raceObject = await createObject({ name: 'Objeto concorrente', categoryId: category.id }, userIds[0]);
   const results = await Promise.allSettled([
     createTask({ ...valid, objectId: raceObject.id }, userIds[0]),
@@ -142,4 +272,13 @@ try {
   if (server) await new Promise(resolve => server.close(resolve));
   await closeDatabase();
 }
+
+
+
+
+
+
+
+
+
 

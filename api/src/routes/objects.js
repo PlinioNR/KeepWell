@@ -1,3 +1,4 @@
+import { analyzeObjectPhoto } from '../services/object-photo-analysis.js';
 import { listObjectHistory } from '../services/tasks.js';
 import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
@@ -32,6 +33,17 @@ router.delete('/:id', async (req, res) => {
 const photoRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: 'draft-8', legacyHeaders: false,
   message: { error: 'Demasiados envios de fotografias. Tenta novamente dentro de 15 minutos.' }
+});
+const photoAnalysisRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: 'draft-8', legacyHeaders: false,
+  keyGenerator: req => req.auth.user._id.toString(),
+  message: { error: 'Demasiados pedidos de analise. Tenta novamente dentro de 15 minutos.' }
+});
+router.post('/photo-analysis', photoAnalysisRateLimit, limitPhotoConcurrency, (req, res, next) => {
+  if (!req.is('multipart/form-data')) return res.status(415).json({ error: 'Envia a fotografia como multipart/form-data.' });
+  next();
+}, receivePhoto, async (req, res) => {
+  res.json(await analyzeObjectPhoto(req.file?.buffer));
 });
 router.put('/:id/photo', photoRateLimit, requirePhotoOwner, limitPhotoConcurrency, (req, res, next) => {
   if (!req.is('multipart/form-data')) return res.status(415).json({ error: 'Envia a fotografia como multipart/form-data.' });

@@ -7,10 +7,21 @@ export function parseTaskId(id) {
   return new ObjectId(id);
 }
 
+export function validateTaskDate(dueOn) {
+  if (typeof dueOn !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dueOn)) {
+    throw Object.assign(new Error('A data prevista deve usar AAAA-MM-DD.'), { status: 400 });
+  }
+  const date = new Date(`${dueOn}T00:00:00.000Z`);
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== dueOn) {
+    throw Object.assign(new Error('A data prevista não existe no calendário.'), { status: 400 });
+  }
+  return dueOn;
+}
+
 export function buildTask(body, userId) {
   if (!body || typeof body !== 'object' || Array.isArray(body) ||
-      Object.keys(body).some(key => !['objectId', 'title', 'dueOn'].includes(key))) {
-    throw Object.assign(new Error('Envia apenas objectId, title e dueOn.'), { status: 400 });
+      Object.keys(body).some(key => !['objectId', 'title', 'description', 'dueOn', 'repeatEveryDays', 'reminderEnabled'].includes(key))) {
+    throw Object.assign(new Error('Envia apenas objectId, title, description, dueOn, repeatEveryDays e reminderEnabled.'), { status: 400 });
   }
   if (typeof body.objectId !== 'string' || !/^[a-f0-9]{24}$/i.test(body.objectId)) {
     throw Object.assign(new Error('Seleciona um objeto válido.'), { status: 400 });
@@ -22,24 +33,33 @@ export function buildTask(body, userId) {
   if ([...title].length < 2 || [...title].length > 120) {
     throw Object.assign(new Error('O título deve ter entre 2 e 120 caracteres.'), { status: 400 });
   }
-  const dueOn = body.dueOn;
-  if (typeof dueOn !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dueOn)) {
-    throw Object.assign(new Error('A data prevista deve usar AAAA-MM-DD.'), { status: 400 });
+  const rawDescription = body.description === undefined ? '' : body.description;
+  if (typeof rawDescription !== 'string' || [...rawDescription.trim()].length > 1000) {
+    throw Object.assign(new Error('A descrição do cuidado deve ser texto com até 1000 caracteres.'), { status: 400 });
   }
-  const date = new Date(`${dueOn}T00:00:00.000Z`);
-  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== dueOn) {
-    throw Object.assign(new Error('A data prevista não existe no calendário.'), { status: 400 });
+  const description = rawDescription.trim();
+  const dueOn = validateTaskDate(body.dueOn);
+  const reminderEnabled = body.reminderEnabled === undefined ? false : body.reminderEnabled;
+  if (typeof reminderEnabled !== 'boolean') {
+    throw Object.assign(new Error('reminderEnabled deve ser true ou false.'), { status: 400 });
+  }
+  const repeatEveryDays = body.repeatEveryDays ?? null;
+  if (repeatEveryDays !== null &&
+      (!Number.isInteger(repeatEveryDays) || repeatEveryDays < 1 || repeatEveryDays > 365)) {
+    throw Object.assign(new Error('A repetição deve ser null ou um número inteiro de 1 a 365 dias.'), { status: 400 });
   }
   if (!(userId instanceof ObjectId)) throw new Error('Utilizador autenticado inválido.');
   const now = new Date();
   // Estado e datas internas são definidos pelo servidor, não pelo cliente.
-  return { objectId: new ObjectId(body.objectId), userId, title, dueOn,
+  return { objectId: new ObjectId(body.objectId), userId, title, description, dueOn, repeatEveryDays, reminderEnabled,
     status: 'pending', completedAt: null, notes: '', createdAt: now, updatedAt: now };
 }
 
 export function toPublicTask(task) {
   return { id: task._id.toString(), objectId: task.objectId.toString(), title: task.title,
-    dueOn: task.dueOn, status: task.status, completedAt: task.completedAt, notes: task.notes ?? '',
+    description: task.description ?? '',
+    reminderEnabled: task.reminderEnabled ?? false,
+    dueOn: task.dueOn, repeatEveryDays: task.repeatEveryDays ?? null, status: task.status, completedAt: task.completedAt, notes: task.notes ?? '',
     createdAt: task.createdAt, updatedAt: task.updatedAt };
 }
 
@@ -52,6 +72,9 @@ export async function setupTasks(database) {
         _id: { bsonType: 'objectId' }, objectId: { bsonType: 'objectId' }, userId: { bsonType: 'objectId' },
         title: { bsonType: 'string', minLength: 2, maxLength: 120, pattern: '^\\S(?:[\\s\\S]*\\S)$' },
         dueOn: { bsonType: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
+        reminderEnabled: { bsonType: 'bool' },
+        repeatEveryDays: { bsonType: ['int', 'null'], minimum: 1, maximum: 365 },
+        description: { bsonType: 'string', maxLength: 1000 },
         notes: { bsonType: 'string', maxLength: 1000 },
         status: { enum: ['pending', 'completed'] }, completedAt: { bsonType: ['date', 'null'] },
         createdAt: { bsonType: 'date' }, updatedAt: { bsonType: 'date' }
@@ -73,4 +96,7 @@ export async function setupTasks(database) {
   await database.collection('tasks').createIndex({ objectId: 1 }, { name: 'tasks_object' });
   await database.collection('tasks').createIndex({ userId: 1, objectId: 1, status: 1, completedAt: -1, _id: -1 }, { name: 'tasks_object_history' });
 }
+
+
+
 

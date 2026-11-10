@@ -1,3 +1,4 @@
+import { isIP } from 'node:net';
 import app from './app.js';
 import { connectDatabase, closeDatabase } from './database.js';
 
@@ -6,12 +7,17 @@ const port = Number(process.env.PORT ?? 3000);
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error('PORT deve ser um número inteiro entre 1 e 65535.');
 }
+const host = process.env.HOST?.trim() || undefined;
+if (host && !isIP(host)) {
+  throw new Error('HOST deve ser um endereço IP, por exemplo 127.0.0.1 ou 0.0.0.0.');
+}
 // Primeiro confirma o MongoDB; só depois disponibiliza a API.
 let server;
 try {
   await connectDatabase();
-  server = app.listen(port, () => {
-    console.log(`API KeepWell disponível em http://localhost:${port}`);
+  server = app.listen({ port, host }, () => {
+    const { address } = server.address();
+    console.log('API KeepWell a executar em ' + address + ' (porta ' + port + ').');
   });
 
   server.on('error', async (error) => {
@@ -41,4 +47,5 @@ async function shutdown() {
 }
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
+
 
