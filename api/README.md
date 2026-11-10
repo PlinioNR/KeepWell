@@ -735,3 +735,9 @@ suites de integração existentes, incluindo categorias e dicas na mesma suite.
 Mostra um resumo no fim e termina com código diferente de zero se alguma falhar.
 As integrações usam o Atlas configurado no .env e removem os seus dados de teste.
 O seed de demonstração é executado separadamente.
+
+npm.cmd run check:photos compara as chaves de fotografia no MongoDB com os
+ficheiros na pasta configurada. Lista referências sem ficheiro e ficheiros
+gerados pela API sem referência. O comando é apenas de leitura e termina com
+código 1 se encontrar diferenças. Executa-o sem uploads ou eliminações em curso
+para evitar diferenças transitórias.
