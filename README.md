@@ -236,6 +236,8 @@ O código é escrito por dois estudantes a aprender Flutter, por isso segue regr
 
 A configuração e os exemplos de teste estão no [README da API](api/README.md).
 
+Os problemas, soluções e testes ficam no [diário técnico](docs/diario-tecnico.md).
+
 O planeamento completo está em [EDT.md](EDT.md).
 
 ## 12. Equipa
