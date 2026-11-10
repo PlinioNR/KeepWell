@@ -538,6 +538,59 @@ upload, acesso por dono, substituição, remoção e limpeza ao eliminar o objet
 os dados e ficheiros do teste no final. A captura pela câmara/galeria e a apresentação
 da fotografia no Flutter ainda não foram implementadas nesta etapa.
 
+## Análise de fotografias com Gemini
+
+`POST /objects/photo-analysis` requer um token Bearer e recebe um único ficheiro
+`photo` em `multipart/form-data` (JPEG, PNG ou WebP estático, até 5 MiB).
+Pode ser usado antes de criar o objeto. O backend valida e normaliza a imagem
+em memória, remove metadados e envia a imagem e o catálogo de categorias ao Gemini.
+A rota não grava a imagem, o objeto ou os cuidados.
+
+Configura estas variáveis no `api/.env` local e reinicia a API.
+
+```dotenv
+GEMINI_API_KEY="cola_a_tua_chave_aqui"
+GEMINI_MODEL=gemini-3.1-flash-lite
+```
+
+A chave é criada no [Google AI Studio](https://aistudio.google.com/apikey)
+e fica apenas no ambiente do backend. Mantém o `.env` fora do Git.
+
+Com a API a correr e um `$token` válido, testa no PowerShell.
+
+```powershell
+$caminhoFoto = "C:\Users\rafae\Downloads\foto.jpg"
+curl.exe -i "http://localhost:3000/objects/photo-analysis" -H "Authorization: Bearer $token" -F "photo=@$caminhoFoto"
+```
+
+O `200 OK` devolve o nome, o ID de uma categoria do catálogo e até quatro
+sugestões com título e descrição. Exemplo de resposta.
+
+```json
+{
+  "object": { "name": "Bicicleta", "categoryId": "507f1f77bcf86cd799439011" },
+  "suggestedTasks": [
+    { "title": "Lubrificar a corrente", "description": "Limpar e lubrificar a corrente." }
+  ]
+}
+```
+
+O nome e a categoria podem vir como `null`, e as sugestões podem vir vazias.
+No Flutter, a categoria sugerida pode ser pré-selecionada pelo ID se ainda
+estiver no catálogo e o utilizador não tiver escolhido outra. A interface deve
+informar que a foto será processada pelo Google, preservar edições manuais e
+ignorar respostas de fotografias que já foram trocadas.
+
+Ao aceitar um cuidado, o utilizador pode rever a sugestão e escolher a data,
+o lembrete e a repetição antes de enviar `POST /tasks`. Essa rota aceita
+`dueOn`, `reminderEnabled` e `repeatEveryDays`. A descrição sugerida
+ainda não é persistida pelo modelo de cuidados.
+
+A rota limita a 10 pedidos por utilizador a cada 15 minutos (`429`).
+Uma falha na chamada ou resposta do Gemini devolve `502`. Configuração em
+falta devolve `503`. Exceder os 15 segundos da chamada ao Gemini devolve
+`504`. O formulário deve permitir continuar manualmente.
+
 ## Cuidados/tarefas — EDT 4.2.4 e primeira etapa de 4.4.2
 
 Uma tarefa pertence a um objeto e ao seu dono. Coleção tasks com _id, objectId e
@@ -592,13 +645,21 @@ Pedidos repetidos, incluindo simultâneos, devolvem a conclusão existente sem a
 data, observações ou criar outro registo. Novas observações enviadas depois da primeira
 conclusão não substituem as originais. Reabertura/edição de concluídos não existe nesta etapa.
 
-GET /objects/:id/history exige o dono do objeto. Devolve apenas tarefas completed,
-ordenadas por completedAt descendente e id como desempate. Paginação page=1 e pageSize=20,
-máximo pageSize=100. Resposta {tasks:[...],page,pageSize,total}. A contagem e a consulta
-podem refletir momentos próximos mas diferentes durante alterações concorrentes.
-Não existe coleção history duplicada: o histórico consulta tasks pelo estado.
-O evento "Objeto adicionado" do protótipo não é incluído nesta rota nesta etapa;
-a data de criação do objeto continua disponível no detalhe do objeto.
+GET /objects/:id/history exige o dono do objeto. A resposta inclui
+`{ tasks, events, page, pageSize, total }`. A lista `tasks` mantém os cuidados
+concluídos, do mais recente ao mais antigo, com desempate pelo ID. A paginação
+usa `page=1` e `pageSize=20` por defeito, com máximo de 100 por página.
+O campo `total` conta apenas os cuidados concluídos.
+
+- `care_completed` traz `occurredAt` (data de conclusão) e `task`, com título e observações.
+- `object_added` traz `occurredAt` (data de criação do objeto). Aparece uma vez na
+  última página de cuidados, ou na primeira quando não há cuidados concluídos.
+  É um evento adicional e pode fazer com que a última página de `events` tenha
+  mais uma entrada do que `pageSize`.
+
+A linha do tempo é montada com os cuidados concluídos e a data de criação
+guardada no objeto. A consulta e a contagem podem refletir momentos ligeiramente
+diferentes durante alterações concorrentes.
 
 Erros: 400 para dados/identificadores/paginação inválidos; 401 sem sessão; 404 para
 cuidado/objeto inexistente ou alheio; 415 para conclusão sem tipo JSON. Histórico vazio

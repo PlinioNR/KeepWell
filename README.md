@@ -54,8 +54,9 @@ Adultos entre os 20 e os 45 anos que vivem de forma independente (estudantes des
 |---|---|
 | **Conta** | Criar conta, entrar e terminar sessão |
 | **Objetos** | Adicionar, ver, listar, editar e eliminar · fotografia tirada com a câmara · categoria · pesquisa por nome e filtro por categoria |
+| **Análise de fotografias** | API Gemini sugere nome, categoria e cuidados antes de guardar o objeto · integração com o formulário pendente |
 | **Cuidados** (tarefas de manutenção) | Criar, ver, listar, editar e eliminar · associados a um objeto · data prevista · marcar como concluído (guarda a data) · lembretes · repetição |
-| **Histórico** | Cuidados concluídos de cada objeto, por ordem cronológica |
+| **Histórico** | Cuidados concluídos do mais recente ao mais antigo e evento de criação do objeto |
 | **Dicas** | Dicas de conservação por categoria |
 | **Perfil** | Definições e modo escuro |
 | **Administração** | Gerir categorias e gerir dicas |
@@ -224,13 +225,16 @@ O código é escrito por dois estudantes a aprender Flutter, por isso segue regr
 | Ecrãs Entrar e Criar conta (interface e validação) | ◐ falta ligar à API |
 | API e base de dados | ◐ em desenvolvimento |
 | Objetos com fotografia | ⬜ |
-| Cuidados, conclusão e histórico | ⬜ |
+| Cuidados, conclusão e histórico | ◐ API disponível |
+| Análise de fotografias com Gemini | ◐ API testada manualmente, integração Flutter pendente |
 | Dicas | ⬜ |
 | Administração de categorias e dicas | ⬜ |
 | Perfil e modo escuro manual | ⬜ |
 | Lembretes (notificações) | ⬜ |
 | Repetição de tarefas | ⬜ |
 | Animações e acabamentos | ⬜ |
+
+A configuração e os exemplos de teste estão no [README da API](api/README.md).
 
 O planeamento completo está em [EDT.md](EDT.md).
 
