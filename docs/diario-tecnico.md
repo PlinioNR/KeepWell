@@ -58,3 +58,29 @@ Guardar comandos e caminhos úteis sem incluir palavras-passe, tokens ou chaves.
 
 - Validar foto inválida, indisponibilidade e tempo limite do Gemini. Em cada cenário, confirmar que a criação manual do objeto e dos cuidados continua disponível.
 - Validar a integração com os ecrãs Flutter com o Plinio.
+
+### 6. A aplicação Flutter não abriu no Chrome
+
+- **Problema.** O comando `flutter run -d chrome` avisou que o projeto não estava configurado para Web e reportou uma falha ao apagar `app/build/flutter_assets`.
+- **Diagnóstico.** O projeto tinha a pasta `app/android` e não tinha a pasta `app/web`. A causa da falha ao apagar a pasta de build ainda não foi confirmada.
+- **Próximo passo.** Executar num dispositivo Android. Se a falha da pasta de build também ocorrer nesse destino, parar a execução do Flutter, limpar a build e repetir.
+- **Validação.** A abertura da aplicação ainda está por confirmar.
+
+### 7. O aapt falhou ao ler o APK no caminho original
+
+- **Problema.** O Flutter reconheceu o emulador Android, mas o aapt reportou `Illegal byte sequence` ao abrir o APK no caminho que inclui `Área de Trabalho`.
+- **Diagnóstico.** O aapt falhou no caminho original e conseguiu ler o manifesto de uma cópia do mesmo APK num caminho temporário sem acentos.
+- **Próximo passo.** Correr o Flutter a partir de um caminho sem acentos e confirmar se a aplicação abre no emulador.
+
+### 8. O Gradle não conseguiu limpar os recursos na unidade K:
+
+- **Problema.** A tarefa `:app:cleanMergeDebugAssets` falhou ao apagar recursos gerados. A unidade K: ainda apontava para o projeto dentro do OneDrive.
+- **Diagnóstico.** O Gradle indicou que algum processo poderia ter ficheiros abertos. O processo responsável não foi identificado.
+- **Solução testada.** Copiar a aplicação para uma pasta local fora do OneDrive e gerar a build sem reutilizar `build`, `.dart_tool` nem `.gradle`.
+- **Validação.** O Flutter compilou e instalou o APK no emulador, e o motor Flutter iniciou.
+
+### 9. A falha de limpeza repetiu-se após mover para C:\dev
+
+- **Problema.** O Gradle voltou a falhar em `:app:cleanMergeDebugAssets` no caminho local.
+- **Solução.** Parar o daemon do Gradle, renomear a pasta gerada `app/build` para a preservar temporariamente e recompilar. A limpeza de `.dart_tool` ainda deu um aviso, mas a resolução de dependências prosseguiu.
+- **Validação.** A build em C:\dev gerou o APK, instalou-o no emulador e iniciou o Flutter. O processo que bloqueou a limpeza inicial ainda não foi identificado.
