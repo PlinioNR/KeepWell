@@ -33,4 +33,47 @@ void main() {
       'dueOn': '2026-11-15',
     });
   });
+
+  test('fetchCares: lê a lista e calcula os estados', () async {
+    final service = CareService(
+      api: ApiClient(
+        client: MockClient((request) async {
+          expect(request.url.path, '/tasks');
+          return http.Response(
+            jsonEncode({
+              'tasks': [
+                // Data muito antiga e por fazer: em atraso.
+                {
+                  'id': 't1',
+                  'objectId': 'o1',
+                  'objectName': 'Portátil',
+                  'title': 'Limpar',
+                  'dueOn': '2000-01-01',
+                  'status': 'pending',
+                },
+                {
+                  'id': 't2',
+                  'objectId': 'o1',
+                  'objectName': 'Portátil',
+                  'title': 'Aspirar',
+                  'dueOn': '2000-01-01',
+                  'status': 'completed',
+                },
+              ],
+            }),
+            200,
+          );
+        }),
+      ),
+    );
+
+    final cares = await service.fetchCares();
+
+    expect(cares.length, 2);
+    expect(cares[0].objectName, 'Portátil');
+    expect(cares[0].isOverdue, isTrue);
+    expect(cares[1].isDone, isTrue);
+    // Concluído nunca está em atraso.
+    expect(cares[1].isOverdue, isFalse);
+  });
 }

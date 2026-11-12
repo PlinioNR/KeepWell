@@ -3,12 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:keepwell/main.dart';
+import 'package:keepwell/models/care.dart';
 import 'package:keepwell/models/category.dart';
 import 'package:keepwell/models/user_object.dart';
 import 'package:keepwell/screens/add_care_screen.dart';
 import 'package:keepwell/screens/add_object_screen.dart';
 import 'package:keepwell/screens/object_detail_screen.dart';
 import 'package:keepwell/theme/app_theme.dart';
+import 'package:keepwell/widgets/care_card.dart';
 import 'package:keepwell/widgets/category_chip.dart';
 import 'package:keepwell/widgets/object_card.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -226,5 +228,29 @@ void main() {
 
     expect(find.text('Escreva a tarefa.'), findsOneWidget);
     expect(find.text('Escolha a data.'), findsOneWidget);
+  });
+
+  testWidgets('CareCard mostra título, objeto, data e estado', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: const Scaffold(
+          body: CareCard(
+            care: Care(
+              id: 't1',
+              objectId: 'o1',
+              objectName: 'Bicicleta urbana',
+              title: 'Lubrificar a corrente',
+              dueOn: '2000-01-01',
+              isDone: false,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Lubrificar a corrente'), findsOneWidget);
+    expect(find.text('Bicicleta urbana · 01/01/2000'), findsOneWidget);
+    expect(find.text('Em atraso'), findsOneWidget);
   });
 }

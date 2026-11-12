@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import 'care_screen.dart';
 import 'home_screen.dart';
 import 'objects_screen.dart';
 import 'profile_screen.dart';
@@ -24,7 +25,7 @@ class _MainScreenState extends State<MainScreen> {
   static const _tabs = [
     HomeScreen(),
     ObjectsScreen(),
-    _ComingSoonScreen(title: 'Cuidados'),
+    CareScreen(),
     ProfileScreen(),
   ];
 
@@ -65,21 +66,6 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Ecrã provisório para separadores que ainda não foram feitos.
-class _ComingSoonScreen extends StatelessWidget {
-  const _ComingSoonScreen({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(automaticallyImplyLeading: false, title: Text(title)),
-      body: const Center(child: Text('Em breve.')),
     );
   }
 }
