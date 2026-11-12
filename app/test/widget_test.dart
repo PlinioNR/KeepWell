@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:keepwell/main.dart';
 import 'package:keepwell/models/category.dart';
 import 'package:keepwell/models/user_object.dart';
+import 'package:keepwell/screens/add_care_screen.dart';
 import 'package:keepwell/screens/add_object_screen.dart';
 import 'package:keepwell/screens/object_detail_screen.dart';
 import 'package:keepwell/theme/app_theme.dart';
@@ -201,5 +202,29 @@ void main() {
     await tester.scrollUntilVisible(find.text('Lubrificar a corrente'), 100);
     expect(find.text('Lubrificar a corrente'), findsOneWidget);
     expect(find.text('15/11/2026'), findsOneWidget);
+  });
+
+  testWidgets('Novo cuidado: objeto já escolhido e valida tarefa e data', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: const AddCareScreen(
+          objects: [
+            UserObject(id: 'o1', name: 'Bicicleta urbana', categoryId: 'c1'),
+          ],
+          objectId: 'o1',
+        ),
+      ),
+    );
+
+    expect(find.text('Bicicleta urbana'), findsOneWidget);
+
+    await tester.tap(find.text('GUARDAR CUIDADO'));
+    await tester.pump();
+
+    expect(find.text('Escreva a tarefa.'), findsOneWidget);
+    expect(find.text('Escolha a data.'), findsOneWidget);
   });
 }

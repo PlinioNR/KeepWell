@@ -9,6 +9,7 @@ import '../theme/app_spacing.dart';
 import '../utils/date_format.dart';
 import '../widgets/category_chip.dart';
 import '../widgets/object_photo.dart';
+import 'add_care_screen.dart';
 import 'add_object_screen.dart';
 
 /// Ecrã 08 Object Detail: mostra os dados de um objeto.
@@ -37,16 +38,15 @@ class ObjectDetailScreen extends StatelessWidget {
   static const _photoHeight = 200.0;
   static const _photoIconSize = 64.0;
 
-  /// Abre o formulário a editar este objeto.
-  Future<void> _edit(BuildContext context) async {
+  /// Abre um ecrã (editar objeto ou novo cuidado) e espera que feche.
+  ///
+  /// Se guardou, volta à lista com a mensagem (a lista atualiza-se e o
+  /// próximo cuidado aparece certo).
+  Future<void> _openAndClose(BuildContext context, Widget screen) async {
     final message = await Navigator.push<String>(
       context,
-      MaterialPageRoute(
-        builder: (context) =>
-            AddObjectScreen(categories: categories, object: object),
-      ),
+      MaterialPageRoute(builder: (context) => screen),
     );
-    // Se guardou, volta à lista com a mensagem (a lista atualiza-se).
     if (message != null && context.mounted) Navigator.pop(context, message);
   }
 
@@ -103,7 +103,10 @@ class ObjectDetailScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(LucideIcons.pencil),
             tooltip: 'Editar objeto',
-            onPressed: () => _edit(context),
+            onPressed: () => _openAndClose(
+              context,
+              AddObjectScreen(categories: categories, object: object),
+            ),
           ),
           IconButton(
             icon: const Icon(LucideIcons.trash2),
@@ -166,16 +169,20 @@ class ObjectDetailScreen extends StatelessWidget {
               ),
             ),
             // Botões fixos em baixo, como no Figma.
-            // onPressed: null = desativado; ligam-se quando houver os
-            // ecrãs de cuidados (11 Add Care) e de histórico (09).
+            // "Ver histórico" está desativado (onPressed: null) até
+            // haver o ecrã 09 Object History.
             Padding(
               padding: const EdgeInsets.all(AppSpacing.md),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const FilledButton(
-                    onPressed: null,
-                    child: Text('ADICIONAR CUIDADO'),
+                  FilledButton(
+                    // Abre o Novo cuidado já com este objeto escolhido.
+                    onPressed: () => _openAndClose(
+                      context,
+                      AddCareScreen(objects: [object], objectId: object.id),
+                    ),
+                    child: const Text('ADICIONAR CUIDADO'),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   const OutlinedButton(

@@ -40,3 +40,12 @@ String? validateObjectName(String? value) {
   if (name.length > 100) return 'Use no máximo 100 caracteres.';
   return null;
 }
+
+/// Título de um cuidado: obrigatório, entre 2 e 120 caracteres (regra da API).
+String? validateCareTitle(String? value) {
+  final title = value?.trim() ?? '';
+  if (title.isEmpty) return 'Escreva a tarefa.';
+  if (title.length < 2) return 'Use pelo menos 2 caracteres.';
+  if (title.length > 120) return 'Use no máximo 120 caracteres.';
+  return null;
+}
