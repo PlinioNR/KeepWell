@@ -3,13 +3,13 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../models/category.dart';
 import '../models/user_object.dart';
-import '../services/api_config.dart';
 import '../services/api_exception.dart';
 import '../services/object_service.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/category_chip.dart';
 import '../widgets/object_card.dart';
 import 'add_object_screen.dart';
+import 'object_detail_screen.dart';
 
 /// Ecrã 06 Objects: lista dos objetos de quem tem sessão iniciada.
 ///
@@ -243,17 +243,24 @@ class _ObjectsScreenState extends State<ObjectsScreen> {
                       const SizedBox(height: AppSpacing.md),
                   itemBuilder: (context, index) {
                     final object = visibleObjects[index];
+                    // "??" usa o texto da direita se a categoria não
+                    // for encontrada.
+                    final categoryName =
+                        _categoryNames[object.categoryId] ?? 'Sem categoria';
                     return ObjectCard(
                       name: object.name,
-                      // "??" usa o texto da direita se a categoria não
-                      // for encontrada.
-                      category:
-                          _categoryNames[object.categoryId] ?? 'Sem categoria',
-                      // A API dá só o caminho da foto; juntamos o
-                      // endereço do servidor.
-                      photoUrl: object.photoUrl == null
-                          ? null
-                          : '$apiBaseUrl${object.photoUrl}',
+                      category: categoryName,
+                      photoUrl: object.photoUrl,
+                      // Toque no cartão: abre o ecrã de detalhe.
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ObjectDetailScreen(
+                            object: object,
+                            categoryName: categoryName,
+                          ),
+                        ),
+                      ),
                     );
                   },
                 ),

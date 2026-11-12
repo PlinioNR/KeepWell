@@ -12,12 +12,14 @@ class CategoryChip extends StatelessWidget {
     super.key,
     required this.label,
     required this.selected,
-    required this.onTap,
+    this.onTap,
   });
 
   final String label;
   final bool selected;
-  final VoidCallback onTap;
+
+  /// null = só mostra a categoria, sem se poder tocar (ex.: no detalhe).
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
