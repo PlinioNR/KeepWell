@@ -82,6 +82,43 @@ class _CareScreenState extends State<CareScreen> {
     }
   }
 
+  /// Pergunta se quer concluir o cuidado e, se sim, pede à API.
+  ///
+  /// Pede confirmação porque a API não tem "desfazer".
+  Future<void> _complete(Care care) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Concluir cuidado?'),
+        content: Text(
+          '"${care.title}" fica no histórico de ${care.objectName}.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCELAR'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('CONCLUIR'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await _careService.completeCare(care.id);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Cuidado concluído.')),
+      );
+      _loadCares();
+    } on ApiException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
   /// Abre o Novo cuidado com a lista de objetos para escolher.
   Future<void> _openAddCare() async {
     final messenger = ScaffoldMessenger.of(context);
@@ -203,8 +240,10 @@ class _CareScreenState extends State<CareScreen> {
                     itemCount: visibleCares.length,
                     separatorBuilder: (context, index) =>
                         const SizedBox(height: AppSpacing.md),
-                    itemBuilder: (context, index) =>
-                        CareCard(care: visibleCares[index]),
+                    itemBuilder: (context, index) => CareCard(
+                      care: visibleCares[index],
+                      onComplete: () => _complete(visibleCares[index]),
+                    ),
                   ),
           ),
         ),

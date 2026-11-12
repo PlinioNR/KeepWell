@@ -76,4 +76,21 @@ void main() {
     // Concluído nunca está em atraso.
     expect(cares[1].isOverdue, isFalse);
   });
+
+  test('completeCare: envia POST /tasks/:id/complete', () async {
+    late http.Request sentRequest;
+    final service = CareService(
+      api: ApiClient(
+        client: MockClient((request) async {
+          sentRequest = request;
+          return http.Response(jsonEncode({'task': {}}), 200);
+        }),
+      ),
+    );
+
+    await service.completeCare('t1');
+
+    expect(sentRequest.method, 'POST');
+    expect(sentRequest.url.path, '/tasks/t1/complete');
+  });
 }

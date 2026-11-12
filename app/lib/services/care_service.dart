@@ -34,4 +34,10 @@ class CareService {
       'dueOn': dueOn,
     });
   }
+
+  /// Marca um cuidado como concluído: POST /tasks/:id/complete.
+  ///
+  /// A API guarda a data de realização e, se o cuidado se repetir,
+  /// cria logo o seguinte. O {} é o corpo vazio (sem observações).
+  Future<void> completeCare(String id) => _api.post('/tasks/$id/complete', {});
 }

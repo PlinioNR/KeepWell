@@ -253,4 +253,29 @@ void main() {
     expect(find.text('Bicicleta urbana · 01/01/2000'), findsOneWidget);
     expect(find.text('Em atraso'), findsOneWidget);
   });
+
+  testWidgets('CareCard: tocar no círculo chama onComplete', (tester) async {
+    var taps = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: CareCard(
+            care: const Care(
+              id: 't1',
+              objectId: 'o1',
+              objectName: 'Bicicleta urbana',
+              title: 'Lubrificar a corrente',
+              dueOn: '2000-01-01',
+              isDone: false,
+            ),
+            onComplete: () => taps++,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Marcar como concluído'));
+    expect(taps, 1);
+  });
 }

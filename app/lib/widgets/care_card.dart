@@ -11,10 +11,14 @@ import '../utils/date_format.dart';
 /// Mostra um círculo (vazio, ou verde com ✓ se concluído), o título,
 /// "objeto · data" e uma etiqueta com o estado: Pendente, Em atraso ou
 /// Concluído. O fundo, a borda e os cantos vêm do cardTheme.
+/// Tocar no círculo vazio chama [onComplete] (concluir o cuidado).
 class CareCard extends StatelessWidget {
-  const CareCard({super.key, required this.care});
+  const CareCard({super.key, required this.care, this.onComplete});
 
   final Care care;
+
+  /// O que acontece ao tocar no círculo de um cuidado por fazer.
+  final VoidCallback? onComplete;
 
   // Tamanho do círculo e dos ícones pequenos (como no Figma).
   static const _circleSize = 24.0;
@@ -61,10 +65,16 @@ class CareCard extends StatelessWidget {
                       color: AppColors.white,
                     ),
                   )
-                : Icon(
-                    LucideIcons.circle,
-                    size: _circleSize,
-                    color: colors.onSurfaceVariant,
+                // IconButton: área de toque de 48 × 48 à volta do círculo
+                // (fácil de acertar com o dedo).
+                : IconButton(
+                    onPressed: onComplete,
+                    tooltip: 'Marcar como concluído',
+                    icon: Icon(
+                      LucideIcons.circle,
+                      size: _circleSize,
+                      color: colors.onSurfaceVariant,
+                    ),
                   ),
             const SizedBox(width: AppSpacing.md),
             Expanded(

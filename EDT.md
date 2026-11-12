@@ -112,9 +112,9 @@ Legenda: ✅ concluído · ◐ iniciado · sem marca = planeado.
   - 5.3.4 Detalhe e eliminação do objeto ✅ (detalhe e eliminar testados no emulador a 12/11)
   - 5.3.5 Histórico do objeto
 - 5.4 Cuidados
-  - 5.4.1 Lista com filtros por estado ◐ (feito a 12/11: separador Cuidados com chips Todos/Pendentes/Em atraso/Concluídos; falta testar no emulador)
+  - 5.4.1 Lista com filtros por estado ✅ (separador Cuidados com chips Todos/Pendentes/Em atraso/Concluídos; testado no emulador a 12/11)
   - 5.4.2 Adicionar e editar cuidado ◐ (adicionar a partir do Detalhe testado no emulador a 12/11; também pelo + do separador Cuidados; sem repetição nem lembrete; falta editar)
-  - 5.4.3 Detalhe, conclusão e eliminação
+  - 5.4.3 Detalhe, conclusão e eliminação ◐ (concluir ao tocar no círculo da lista, com confirmação, feito a 12/11; falta testar no emulador, ecrã 12 Detalhe e eliminar)
   - 5.4.4 Lembretes (notificações locais)
   - 5.4.5 Repetição de tarefas
 - 5.5 Dicas
