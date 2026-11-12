@@ -58,20 +58,19 @@ class _ObjectsScreenState extends State<ObjectsScreen> {
     super.dispose();
   }
 
-  /// Abre o ecrã Novo objeto e, se for criado, atualiza a lista.
-  Future<void> _openAddObject() async {
-    // "await" espera que o ecrã Novo objeto feche. Ele devolve true
-    // se o objeto foi guardado.
-    final created = await Navigator.push<bool>(
+  /// Abre um ecrã (Novo objeto ou Detalhe) e espera que feche.
+  ///
+  /// Se algo mudou, esse ecrã devolve uma mensagem (ex.: 'Objeto
+  /// adicionado.'): mostramo-la e atualizamos a lista.
+  Future<void> _openAndReload(Widget screen) async {
+    final message = await Navigator.push<String>(
       context,
-      MaterialPageRoute(
-        builder: (context) => AddObjectScreen(categories: _categories),
-      ),
+      MaterialPageRoute(builder: (context) => screen),
     );
 
-    if (created != true || !mounted) return;
+    if (message == null || !mounted) return;
     ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Objeto adicionado.')));
+        .showSnackBar(SnackBar(content: Text(message)));
     _loadObjects();
   }
 
@@ -129,7 +128,8 @@ class _ObjectsScreenState extends State<ObjectsScreen> {
           IconButton(
             icon: const Icon(LucideIcons.plus),
             tooltip: 'Adicionar objeto',
-            onPressed: _openAddObject,
+            onPressed: () =>
+                _openAndReload(AddObjectScreen(categories: _categories)),
           ),
         ],
       ),
@@ -252,13 +252,11 @@ class _ObjectsScreenState extends State<ObjectsScreen> {
                       category: categoryName,
                       photoUrl: object.photoUrl,
                       // Toque no cartão: abre o ecrã de detalhe.
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ObjectDetailScreen(
-                            object: object,
-                            categoryName: categoryName,
-                          ),
+                      onTap: () => _openAndReload(
+                        ObjectDetailScreen(
+                          object: object,
+                          categoryName: categoryName,
+                          categories: _categories,
                         ),
                       ),
                     );

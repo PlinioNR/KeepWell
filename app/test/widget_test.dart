@@ -135,6 +135,36 @@ void main() {
     expect(find.text('Escolha uma categoria.'), findsOneWidget);
   });
 
+  testWidgets('Editar objeto: os campos vêm preenchidos', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: const AddObjectScreen(
+          categories: [Category(id: 'c1', name: 'Veículos', icon: 'bike')],
+          object: UserObject(
+            id: '1',
+            name: 'Bicicleta urbana',
+            categoryId: 'c1',
+            acquiredOn: '2023-05-20',
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Editar objeto'), findsOneWidget);
+    expect(find.text('Bicicleta urbana'), findsOneWidget);
+    expect(find.text('Veículos'), findsOneWidget);
+    // O ecrã de teste é pequeno: desliza até à data.
+    // ".first" = a lista do formulário (os campos também deslizam).
+    await tester.scrollUntilVisible(
+      find.text('20/05/2023'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('20/05/2023'), findsOneWidget);
+    expect(find.text('GUARDAR ALTERAÇÕES'), findsOneWidget);
+  });
+
   testWidgets('O Detalhe mostra os dados do objeto e o próximo cuidado', (
     tester,
   ) async {
@@ -155,7 +185,11 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light,
-        home: ObjectDetailScreen(object: object, categoryName: 'Veículos'),
+        home: ObjectDetailScreen(
+          object: object,
+          categoryName: 'Veículos',
+          categories: const [],
+        ),
       ),
     );
 

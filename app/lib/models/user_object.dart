@@ -9,7 +9,7 @@ class UserObject {
     required this.categoryId,
     this.acquiredOn,
     this.photoUrl,
-    this.description,
+    this.description = '',
     this.nextCareTitle,
     this.nextCareDueOn,
   });
@@ -26,8 +26,8 @@ class UserObject {
   /// Caminho da foto na API (ex.: '/objects/123/photo'), ou null sem foto.
   final String? photoUrl;
 
-  /// Descrição livre do objeto, ou null.
-  final String? description;
+  /// Descrição livre do objeto ('' se não tiver).
+  final String description;
 
   /// Próximo cuidado por fazer (título e data 'AAAA-MM-DD'), ou null.
   /// A API manda-o na lista de objetos, dentro de "nextCare".
@@ -44,7 +44,7 @@ class UserObject {
       categoryId: json['categoryId'] as String,
       acquiredOn: json['acquiredOn'] as String?,
       photoUrl: json['photoUrl'] as String?,
-      description: json['description'] as String?,
+      description: json['description'] as String? ?? '',
       nextCareTitle: nextCare?['title'] as String?,
       nextCareDueOn: nextCare?['dueOn'] as String?,
     );

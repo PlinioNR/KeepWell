@@ -39,6 +39,26 @@ class ObjectService {
     return UserObject.fromJson(body['object'] as Map<String, dynamic>);
   }
 
+  /// Altera um objeto: PATCH /objects/:id. Devolve o objeto alterado.
+  Future<UserObject> updateObject(
+    String id, {
+    required String name,
+    required String categoryId,
+    String? acquiredOn,
+  }) async {
+    final body = await _api.patch('/objects/$id', {
+      'name': name,
+      'categoryId': categoryId,
+      'acquiredOn': acquiredOn,
+    });
+    return UserObject.fromJson(body['object'] as Map<String, dynamic>);
+  }
+
+  /// Elimina um objeto: DELETE /objects/:id.
+  ///
+  /// A API recusa (erro 409) se o objeto tiver cuidados associados.
+  Future<void> deleteObject(String id) => _api.delete('/objects/$id');
+
   /// Envia a fotografia de um objeto: PUT /objects/:id/photo.
   ///
   /// [filePath] é o caminho do ficheiro no telemóvel (vem da câmara).

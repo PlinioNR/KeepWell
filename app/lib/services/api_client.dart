@@ -49,6 +49,24 @@ class ApiClient {
     );
   }
 
+  /// Altera dados que já existem (PATCH): só envia os campos a mudar.
+  Future<Map<String, dynamic>> patch(String path, Map<String, dynamic> data) {
+    return _send(
+      () => _client.patch(
+        Uri.parse('$apiBaseUrl$path'),
+        headers: {...authHeader, 'Content-Type': 'application/json'},
+        body: jsonEncode(data),
+      ),
+    );
+  }
+
+  /// Apaga dados (DELETE).
+  Future<Map<String, dynamic>> delete(String path) {
+    return _send(
+      () => _client.delete(Uri.parse('$apiBaseUrl$path'), headers: authHeader),
+    );
+  }
+
   /// Envia uma fotografia no formato "multipart/form-data", que é o
   /// formato usado para enviar ficheiros, no campo "photo".
   /// [method] é 'PUT' (guardar a foto) ou 'POST' (analisar a foto).
@@ -94,6 +112,9 @@ class ApiClient {
         'Não foi possível ligar ao servidor. Verifique a ligação.',
       );
     }
+
+    // 204 = "No Content": correu bem, mas a resposta vem vazia (ex.: DELETE).
+    if (response.statusCode == 204) return {};
 
     // 200 = "OK" e 201 = "Created": o pedido correu bem.
     if (response.statusCode == 200 || response.statusCode == 201) {
