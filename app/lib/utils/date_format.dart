@@ -15,3 +15,7 @@ String formatDateForDisplay(DateTime date) {
 String formatDateForApi(DateTime date) {
   return '${date.year}-${_twoDigits(date.month)}-${_twoDigits(date.day)}';
 }
+
+/// Data que veio da API ('2024-03-09') pronta a mostrar: '09/03/2024'.
+String formatApiDate(String apiDate) =>
+    formatDateForDisplay(DateTime.parse(apiDate));

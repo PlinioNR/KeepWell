@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../models/category.dart';
+import '../models/user_object.dart';
 import '../services/api_exception.dart';
 import '../services/object_service.dart';
 import '../theme/app_spacing.dart';
@@ -10,17 +11,21 @@ import '../utils/validators.dart';
 import '../widgets/app_text_field.dart';
 import '../widgets/photo_picker_box.dart';
 
-/// Ecrã 07 Add Object: formulário para registar um objeto novo.
+/// Ecrã 07 Add Object: formulário para registar ou editar um objeto.
 ///
 /// Recebe a lista de categorias do ecrã Objetos (já a tinha carregado),
 /// para não a pedir outra vez à API.
-/// Ao guardar com sucesso, fecha e devolve "true" ao ecrã anterior,
-/// para ele saber que tem de atualizar a lista.
+/// Se receber um [object], está a editar: os campos vêm preenchidos.
+/// Ao guardar com sucesso, fecha e devolve a mensagem a mostrar
+/// (ex.: 'Objeto adicionado.'), para o ecrã Objetos atualizar a lista.
 /// A fotografia é opcional: se houver, é enviada logo a seguir ao objeto.
 class AddObjectScreen extends StatefulWidget {
-  const AddObjectScreen({super.key, required this.categories});
+  const AddObjectScreen({super.key, required this.categories, this.object});
 
   final List<Category> categories;
+
+  /// Objeto a editar, ou null para criar um novo.
+  final UserObject? object;
 
   @override
   State<AddObjectScreen> createState() => _AddObjectScreenState();
@@ -53,6 +58,23 @@ class _AddObjectScreenState extends State<AddObjectScreen> {
   // que a análise pôs (pode ser trocado) ou se a pessoa o alterou.
   String _suggestedName = '';
   String? _suggestedCategoryId;
+
+  // true se o ecrã está a editar um objeto que já existe.
+  bool get _isEditing => widget.object != null;
+
+  // Ao editar, preenche os campos com os dados atuais do objeto.
+  @override
+  void initState() {
+    super.initState();
+    final object = widget.object;
+    if (object == null) return;
+    _nameController.text = object.name;
+    _categoryId = object.categoryId;
+    if (object.acquiredOn != null) {
+      _acquiredOn = DateTime.parse(object.acquiredOn!);
+      _dateController.text = formatDateForDisplay(_acquiredOn!);
+    }
+  }
 
   /// Guarda a foto escolhida e pede à API para a analisar.
   ///
@@ -130,13 +152,26 @@ class _AddObjectScreenState extends State<AddObjectScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 1.º pedido: cria o objeto (a API devolve-o já com o id).
-      final object = await _objectService.createObject(
-        name: _nameController.text.trim(),
-        categoryId: _categoryId!,
-        // Sem data escolhida, envia null (a data é opcional).
-        acquiredOn: _acquiredOn == null ? null : formatDateForApi(_acquiredOn!),
-      );
+      final name = _nameController.text.trim();
+      // Sem data escolhida, envia null (a data é opcional).
+      final acquiredOn = _acquiredOn == null
+          ? null
+          : formatDateForApi(_acquiredOn!);
+
+      // 1.º pedido: altera o objeto (a editar) ou cria-o (a API devolve-o
+      // já com o id).
+      final object = _isEditing
+          ? await _objectService.updateObject(
+              widget.object!.id,
+              name: name,
+              categoryId: _categoryId!,
+              acquiredOn: acquiredOn,
+            )
+          : await _objectService.createObject(
+              name: name,
+              categoryId: _categoryId!,
+              acquiredOn: acquiredOn,
+            );
 
       // 2.º pedido (só se houver foto): envia a fotografia desse objeto.
       if (_photoPath != null) {
@@ -153,8 +188,11 @@ class _AddObjectScreenState extends State<AddObjectScreen> {
       }
 
       if (!mounted) return;
-      // Fecha o ecrã e avisa o ecrã Objetos de que correu bem.
-      Navigator.pop(context, true);
+      // Fecha o ecrã e devolve a mensagem a mostrar na lista.
+      Navigator.pop(
+        context,
+        _isEditing ? 'Objeto atualizado.' : 'Objeto adicionado.',
+      );
     } on ApiException catch (error) {
       if (!mounted) return;
       _showMessage(error.message);
@@ -173,7 +211,7 @@ class _AddObjectScreenState extends State<AddObjectScreen> {
           tooltip: 'Voltar',
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Novo objeto'),
+        title: Text(_isEditing ? 'Editar objeto' : 'Novo objeto'),
       ),
       body: SafeArea(
         child: Form(
@@ -187,6 +225,7 @@ class _AddObjectScreenState extends State<AddObjectScreen> {
                   children: [
                     PhotoPickerBox(
                       photoPath: _photoPath,
+                      photoUrl: widget.object?.photoUrl,
                       onPicked: _onPhotoPicked,
                     ),
                     const SizedBox(height: AppSpacing.sm),
@@ -264,7 +303,9 @@ class _AddObjectScreenState extends State<AddObjectScreen> {
                           height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('GUARDAR OBJETO'),
+                      : Text(
+                          _isEditing ? 'GUARDAR ALTERAÇÕES' : 'GUARDAR OBJETO',
+                        ),
                 ),
               ),
             ],

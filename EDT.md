@@ -107,13 +107,13 @@ Legenda: ✅ concluído · ◐ iniciado · sem marca = planeado.
   - 5.2.4 Terminar sessão ✅ (ligado à API, testado a 06/11; botão provisório na Home, passa para o Settings)
 - 5.3 Objetos
   - 5.3.1 Início
-  - 5.3.2 Lista com pesquisa e filtro por categoria ◐ (pesquisa e filtro feitos na app a 09/11; falta testar no emulador)
-  - 5.3.3 Adicionar e editar objeto com fotografia (câmara) ◐ (adicionar com foto (câmara ou galeria) feito a 09/11; falta testar no emulador e editar)
-  - 5.3.4 Detalhe e eliminação do objeto
+  - 5.3.2 Lista com pesquisa e filtro por categoria ✅ (pesquisa e filtro na app; testado no emulador)
+  - 5.3.3 Adicionar e editar objeto com fotografia (câmara) ✅ (adicionar e editar testados no emulador a 12/11)
+  - 5.3.4 Detalhe e eliminação do objeto ✅ (detalhe e eliminar testados no emulador a 12/11)
   - 5.3.5 Histórico do objeto
 - 5.4 Cuidados
-  - 5.4.1 Lista com filtros por estado
-  - 5.4.2 Adicionar e editar cuidado
+  - 5.4.1 Lista com filtros por estado ◐ (feito a 12/11: separador Cuidados com chips Todos/Pendentes/Em atraso/Concluídos; falta testar no emulador)
+  - 5.4.2 Adicionar e editar cuidado ◐ (adicionar a partir do Detalhe testado no emulador a 12/11; também pelo + do separador Cuidados; sem repetição nem lembrete; falta editar)
   - 5.4.3 Detalhe, conclusão e eliminação
   - 5.4.4 Lembretes (notificações locais)
   - 5.4.5 Repetição de tarefas

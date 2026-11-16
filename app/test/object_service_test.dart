@@ -188,4 +188,59 @@ void main() {
       expect(result['categoryId'], 'c1');
     },
   );
+
+  test('updateObject: envia PATCH com os dados novos', () async {
+    late http.Request sentRequest;
+    final service = ObjectService(
+      api: ApiClient(
+        client: MockClient((request) async {
+          sentRequest = request;
+          return jsonResponse({
+            'object': {'id': '9', 'name': 'Portátil novo', 'categoryId': 'c1'},
+          }, 200);
+        }),
+      ),
+    );
+
+    final object = await service.updateObject(
+      '9',
+      name: 'Portátil novo',
+      categoryId: 'c1',
+    );
+
+    expect(sentRequest.method, 'PATCH');
+    expect(sentRequest.url.path, '/objects/9');
+    expect(jsonDecode(sentRequest.body)['name'], 'Portátil novo');
+    expect(object.name, 'Portátil novo');
+  });
+
+  test('deleteObject: aceita 204 e mostra o erro 409 da API', () async {
+    // 1.º pedido corre bem (204, sem corpo); o 2.º é recusado (409).
+    var calls = 0;
+    final service = ObjectService(
+      api: ApiClient(
+        client: MockClient((request) async {
+          calls++;
+          expect(request.method, 'DELETE');
+          return calls == 1
+              ? http.Response('', 204)
+              : jsonResponse({
+                  'error': 'O objeto tem tarefas associadas.',
+                }, 409);
+        }),
+      ),
+    );
+
+    await service.deleteObject('9');
+    expect(
+      () => service.deleteObject('9'),
+      throwsA(
+        isA<ApiException>().having(
+          (error) => error.message,
+          'message',
+          'O objeto tem tarefas associadas.',
+        ),
+      ),
+    );
+  });
 }

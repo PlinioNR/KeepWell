@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../theme/app_spacing.dart';
+import 'object_photo.dart';
 
 /// Caixa "Adicionar fotografia" (componente Forms/Photo Upload do Figma).
 ///
@@ -16,10 +17,14 @@ class PhotoPickerBox extends StatelessWidget {
     super.key,
     required this.photoPath,
     required this.onPicked,
+    this.photoUrl,
   });
 
   /// Caminho da foto escolhida no telemóvel, ou null se ainda não há.
   final String? photoPath;
+
+  /// Foto que o objeto já tem na API (ao editar), ou null.
+  final String? photoUrl;
 
   /// Chamado com o caminho da foto nova.
   final void Function(String path) onPicked;
@@ -79,10 +84,12 @@ class PhotoPickerBox extends StatelessWidget {
         child: SizedBox(
           height: 200,
           width: double.infinity,
-          // Com foto: mostra a imagem a ocupar a caixa toda (cover).
-          // Sem foto: o ícone e os textos do Figma.
+          // 1.º a foto nova escolhida; 2.º a foto que já está na API;
+          // sem nenhuma: o ícone e os textos do Figma.
           child: photoPath != null
               ? Image.file(File(photoPath!), fit: BoxFit.cover)
+              : photoUrl != null
+              ? ObjectPhoto(photoUrl: photoUrl)
               : Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

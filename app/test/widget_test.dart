@@ -3,9 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:keepwell/main.dart';
+import 'package:keepwell/models/care.dart';
 import 'package:keepwell/models/category.dart';
+import 'package:keepwell/models/user_object.dart';
+import 'package:keepwell/screens/add_care_screen.dart';
 import 'package:keepwell/screens/add_object_screen.dart';
+import 'package:keepwell/screens/object_detail_screen.dart';
 import 'package:keepwell/theme/app_theme.dart';
+import 'package:keepwell/widgets/care_card.dart';
 import 'package:keepwell/widgets/category_chip.dart';
 import 'package:keepwell/widgets/object_card.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -131,5 +136,121 @@ void main() {
 
     expect(find.text('Escreva o nome do objeto.'), findsOneWidget);
     expect(find.text('Escolha uma categoria.'), findsOneWidget);
+  });
+
+  testWidgets('Editar objeto: os campos vêm preenchidos', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: const AddObjectScreen(
+          categories: [Category(id: 'c1', name: 'Veículos', icon: 'bike')],
+          object: UserObject(
+            id: '1',
+            name: 'Bicicleta urbana',
+            categoryId: 'c1',
+            acquiredOn: '2023-05-20',
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Editar objeto'), findsOneWidget);
+    expect(find.text('Bicicleta urbana'), findsOneWidget);
+    expect(find.text('Veículos'), findsOneWidget);
+    // O ecrã de teste é pequeno: desliza até à data.
+    // ".first" = a lista do formulário (os campos também deslizam).
+    await tester.scrollUntilVisible(
+      find.text('20/05/2023'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('20/05/2023'), findsOneWidget);
+    expect(find.text('GUARDAR ALTERAÇÕES'), findsOneWidget);
+  });
+
+  testWidgets('O Detalhe mostra os dados do objeto e o próximo cuidado', (
+    tester,
+  ) async {
+    // Objeto como a API o manda na lista (com "nextCare").
+    final object = UserObject.fromJson({
+      'id': '1',
+      'name': 'Bicicleta urbana',
+      'categoryId': 'c1',
+      'acquiredOn': '2023-05-20',
+      'description': 'Bicicleta do dia a dia.',
+      'nextCare': {
+        'id': 't1',
+        'title': 'Lubrificar a corrente',
+        'dueOn': '2026-11-15',
+      },
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: ObjectDetailScreen(
+          object: object,
+          categoryName: 'Veículos',
+          categories: const [],
+        ),
+      ),
+    );
+
+    expect(find.text('Bicicleta urbana'), findsOneWidget);
+    expect(find.text('Veículos'), findsOneWidget);
+    expect(find.text('Bicicleta do dia a dia.'), findsOneWidget);
+    expect(find.text('Adquirido em 20/05/2023'), findsOneWidget);
+    // O ecrã de teste é pequeno: desliza até ao cuidado.
+    await tester.scrollUntilVisible(find.text('Lubrificar a corrente'), 100);
+    expect(find.text('Lubrificar a corrente'), findsOneWidget);
+    expect(find.text('15/11/2026'), findsOneWidget);
+  });
+
+  testWidgets('Novo cuidado: objeto já escolhido e valida tarefa e data', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: const AddCareScreen(
+          objects: [
+            UserObject(id: 'o1', name: 'Bicicleta urbana', categoryId: 'c1'),
+          ],
+          objectId: 'o1',
+        ),
+      ),
+    );
+
+    expect(find.text('Bicicleta urbana'), findsOneWidget);
+
+    await tester.tap(find.text('GUARDAR CUIDADO'));
+    await tester.pump();
+
+    expect(find.text('Escreva a tarefa.'), findsOneWidget);
+    expect(find.text('Escolha a data.'), findsOneWidget);
+  });
+
+  testWidgets('CareCard mostra título, objeto, data e estado', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: const Scaffold(
+          body: CareCard(
+            care: Care(
+              id: 't1',
+              objectId: 'o1',
+              objectName: 'Bicicleta urbana',
+              title: 'Lubrificar a corrente',
+              dueOn: '2000-01-01',
+              isDone: false,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Lubrificar a corrente'), findsOneWidget);
+    expect(find.text('Bicicleta urbana · 01/01/2000'), findsOneWidget);
+    expect(find.text('Em atraso'), findsOneWidget);
   });
 }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../services/api_client.dart';
 import '../theme/app_spacing.dart';
+import 'object_photo.dart';
 
 /// Cartão de um objeto na lista (componente Object Card do Figma).
 ///
@@ -21,10 +21,10 @@ class ObjectCard extends StatelessWidget {
   final String name;
   final String category;
 
-  /// Endereço completo da foto na API, ou null se o objeto não tem foto.
+  /// Caminho da foto na API, ou null se o objeto não tem foto.
   final String? photoUrl;
 
-  /// O que acontece ao tocar no cartão (mais tarde: abrir o detalhe).
+  /// O que acontece ao tocar no cartão (abrir o detalhe).
   final VoidCallback? onTap;
 
   @override
@@ -50,17 +50,7 @@ class ObjectCard extends StatelessWidget {
                 ),
                 // Corta a foto com os mesmos cantos arredondados.
                 clipBehavior: Clip.antiAlias,
-                child: photoUrl == null
-                    ? const Icon(LucideIcons.package)
-                    // A foto também precisa do token para ser vista.
-                    // Se falhar a carregar, mostra o ícone (errorBuilder).
-                    : Image.network(
-                        photoUrl!,
-                        headers: ApiClient.authHeader,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(LucideIcons.package),
-                      ),
+                child: ObjectPhoto(photoUrl: photoUrl),
               ),
               const SizedBox(width: AppSpacing.md),
               // Expanded ocupa o espaço livre; nomes longos ficam com "…".

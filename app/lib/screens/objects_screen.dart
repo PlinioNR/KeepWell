@@ -3,13 +3,13 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../models/category.dart';
 import '../models/user_object.dart';
-import '../services/api_config.dart';
 import '../services/api_exception.dart';
 import '../services/object_service.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/category_chip.dart';
 import '../widgets/object_card.dart';
 import 'add_object_screen.dart';
+import 'object_detail_screen.dart';
 
 /// Ecrã 06 Objects: lista dos objetos de quem tem sessão iniciada.
 ///
@@ -58,20 +58,19 @@ class _ObjectsScreenState extends State<ObjectsScreen> {
     super.dispose();
   }
 
-  /// Abre o ecrã Novo objeto e, se for criado, atualiza a lista.
-  Future<void> _openAddObject() async {
-    // "await" espera que o ecrã Novo objeto feche. Ele devolve true
-    // se o objeto foi guardado.
-    final created = await Navigator.push<bool>(
+  /// Abre um ecrã (Novo objeto ou Detalhe) e espera que feche.
+  ///
+  /// Se algo mudou, esse ecrã devolve uma mensagem (ex.: 'Objeto
+  /// adicionado.'): mostramo-la e atualizamos a lista.
+  Future<void> _openAndReload(Widget screen) async {
+    final message = await Navigator.push<String>(
       context,
-      MaterialPageRoute(
-        builder: (context) => AddObjectScreen(categories: _categories),
-      ),
+      MaterialPageRoute(builder: (context) => screen),
     );
 
-    if (created != true || !mounted) return;
+    if (message == null || !mounted) return;
     ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Objeto adicionado.')));
+        .showSnackBar(SnackBar(content: Text(message)));
     _loadObjects();
   }
 
@@ -129,7 +128,8 @@ class _ObjectsScreenState extends State<ObjectsScreen> {
           IconButton(
             icon: const Icon(LucideIcons.plus),
             tooltip: 'Adicionar objeto',
-            onPressed: _openAddObject,
+            onPressed: () =>
+                _openAndReload(AddObjectScreen(categories: _categories)),
           ),
         ],
       ),
@@ -243,17 +243,22 @@ class _ObjectsScreenState extends State<ObjectsScreen> {
                       const SizedBox(height: AppSpacing.md),
                   itemBuilder: (context, index) {
                     final object = visibleObjects[index];
+                    // "??" usa o texto da direita se a categoria não
+                    // for encontrada.
+                    final categoryName =
+                        _categoryNames[object.categoryId] ?? 'Sem categoria';
                     return ObjectCard(
                       name: object.name,
-                      // "??" usa o texto da direita se a categoria não
-                      // for encontrada.
-                      category:
-                          _categoryNames[object.categoryId] ?? 'Sem categoria',
-                      // A API dá só o caminho da foto; juntamos o
-                      // endereço do servidor.
-                      photoUrl: object.photoUrl == null
-                          ? null
-                          : '$apiBaseUrl${object.photoUrl}',
+                      category: categoryName,
+                      photoUrl: object.photoUrl,
+                      // Toque no cartão: abre o ecrã de detalhe.
+                      onTap: () => _openAndReload(
+                        ObjectDetailScreen(
+                          object: object,
+                          categoryName: categoryName,
+                          categories: _categories,
+                        ),
+                      ),
                     );
                   },
                 ),

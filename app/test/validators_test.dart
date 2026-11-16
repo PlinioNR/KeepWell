@@ -20,4 +20,10 @@ void main() {
     expect(validateObjectName('a'), 'Use pelo menos 2 caracteres.');
     expect(validateObjectName('Bicicleta'), isNull);
   });
+
+  test('validateCareTitle: obrigatório, pelo menos 2 caracteres', () {
+    expect(validateCareTitle(''), 'Escreva a tarefa.');
+    expect(validateCareTitle('a'), 'Use pelo menos 2 caracteres.');
+    expect(validateCareTitle('Lubrificar a corrente'), isNull);
+  });
 }
