@@ -84,3 +84,10 @@ Guardar comandos e caminhos úteis sem incluir palavras-passe, tokens ou chaves.
 - **Problema.** O Gradle voltou a falhar em `:app:cleanMergeDebugAssets` no caminho local.
 - **Solução.** Parar o daemon do Gradle, renomear a pasta gerada `app/build` para a preservar temporariamente e recompilar. A limpeza de `.dart_tool` ainda deu um aviso, mas a resolução de dependências prosseguiu.
 - **Validação.** A build em C:\dev gerou o APK, instalou-o no emulador e iniciou o Flutter. O processo que bloqueou a limpeza inicial ainda não foi identificado.
+
+### Login com a API local parada
+
+- **Problema.** A app no emulador mostrou um erro de servidor ao tentar iniciar sessão.
+- **Diagnóstico.** O Flutter apontava para `10.0.2.2:3000`, mas o computador recusava ligações à porta 3000.
+- **Solução.** Iniciar a API com `npm run dev` na pasta `api`.
+- **Validação.** A API iniciou, ligou ao MongoDB Atlas e o endpoint `/health/database` respondeu com sucesso. O login na app precisa de ser repetido.
