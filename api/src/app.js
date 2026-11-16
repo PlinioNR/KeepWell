@@ -14,6 +14,19 @@ import notificationRoutes from './routes/notifications.js';
 // O Express recebe os pedidos HTTP e permite definir as rotas da API.
 const app = express();
 
+app.use((req, res, next) => {
+  res.vary('Origin');
+  if (req.get('Origin') !== 'http://localhost:8080') return next();
+
+  res.set('Access-Control-Allow-Origin', 'http://localhost:8080');
+  if (req.method === 'OPTIONS' && req.get('Access-Control-Request-Method')) {
+    res.set('Access-Control-Allow-Methods', 'GET, POST, PATCH, PUT, DELETE');
+    res.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+    return res.sendStatus(204);
+  }
+  next();
+});
+
 // Converte pedidos com corpo JSON em objetos JavaScript acessíveis em req.body.
 // O limite evita receber corpos demasiado grandes para esta API.
 app.use(express.json({ limit: '100kb' }));

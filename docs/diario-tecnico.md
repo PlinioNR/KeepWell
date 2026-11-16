@@ -63,8 +63,8 @@ Guardar comandos e caminhos úteis sem incluir palavras-passe, tokens ou chaves.
 
 - **Problema.** O comando `flutter run -d chrome` avisou que o projeto não estava configurado para Web e reportou uma falha ao apagar `app/build/flutter_assets`.
 - **Diagnóstico.** O projeto tinha a pasta `app/android` e não tinha a pasta `app/web`. A causa da falha ao apagar a pasta de build ainda não foi confirmada.
-- **Próximo passo.** Executar num dispositivo Android. Se a falha da pasta de build também ocorrer nesse destino, parar a execução do Flutter, limpar a build e repetir.
-- **Validação.** A abertura da aplicação ainda está por confirmar.
+- **Solução.** Adicionar suporte Web, usar localhost para aceder à API no Chrome e permitir a origem local do Flutter. A seleção e o envio de fotografias passaram a usar os bytes da imagem.
+- **Validação.** A compilação Web passou e a API respondeu ao pedido CORS da origem http://localhost:8080. O utilizador confirmou que a app abriu no Chrome e mostrou os cuidados da conta. O envio de uma fotografia no navegador ainda está por testar.
 
 ### 7. O aapt falhou ao ler o APK no caminho original
 
