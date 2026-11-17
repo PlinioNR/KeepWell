@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -11,23 +10,23 @@ import 'object_photo.dart';
 ///
 /// Ao tocar, pergunta se quer usar a câmara ou a galeria e abre-a.
 /// Depois mostra a foto escolhida; tocar outra vez permite trocá-la.
-/// O ecrã que a usa recebe o caminho do ficheiro em [onPicked].
+/// O ecrã que a usa recebe o ficheiro em [onPicked].
 class PhotoPickerBox extends StatelessWidget {
   const PhotoPickerBox({
     super.key,
-    required this.photoPath,
+    required this.photo,
     required this.onPicked,
     this.photoUrl,
   });
 
-  /// Caminho da foto escolhida no telemóvel, ou null se ainda não há.
-  final String? photoPath;
+  /// Foto escolhida, ou null se ainda não há.
+  final XFile? photo;
 
   /// Foto que o objeto já tem na API (ao editar), ou null.
   final String? photoUrl;
 
-  /// Chamado com o caminho da foto nova.
-  final void Function(String path) onPicked;
+  /// Chamado com a foto nova.
+  final void Function(XFile photo) onPicked;
 
   /// Mostra o menu Câmara/Galeria e abre a opção escolhida.
   Future<void> _choosePhoto(BuildContext context) async {
@@ -64,7 +63,7 @@ class PhotoPickerBox extends StatelessWidget {
       maxHeight: 1600,
       imageQuality: 85,
     );
-    if (photo != null) onPicked(photo.path);
+    if (photo != null) onPicked(photo);
   }
 
   @override
@@ -86,8 +85,14 @@ class PhotoPickerBox extends StatelessWidget {
           width: double.infinity,
           // 1.º a foto nova escolhida; 2.º a foto que já está na API;
           // sem nenhuma: o ícone e os textos do Figma.
-          child: photoPath != null
-              ? Image.file(File(photoPath!), fit: BoxFit.cover)
+          child: photo != null
+              ? FutureBuilder<Uint8List>(
+                  key: ObjectKey(photo),
+                  future: photo!.readAsBytes(),
+                  builder: (context, snapshot) => snapshot.hasData
+                      ? Image.memory(snapshot.data!, fit: BoxFit.cover)
+                      : const Icon(LucideIcons.image),
+                )
               : photoUrl != null
               ? ObjectPhoto(photoUrl: photoUrl)
               : Column(
@@ -101,7 +106,9 @@ class PhotoPickerBox extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      'Tirar uma foto ou escolher da galeria',
+                      kIsWeb
+                          ? 'Escolher uma fotografia'
+                          : 'Tirar uma foto ou escolher da galeria',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colors.onSurfaceVariant,
                       ),

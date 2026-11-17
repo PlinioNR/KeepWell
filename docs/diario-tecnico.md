@@ -63,8 +63,8 @@ Guardar comandos e caminhos úteis sem incluir palavras-passe, tokens ou chaves.
 
 - **Problema.** O comando `flutter run -d chrome` avisou que o projeto não estava configurado para Web e reportou uma falha ao apagar `app/build/flutter_assets`.
 - **Diagnóstico.** O projeto tinha a pasta `app/android` e não tinha a pasta `app/web`. A causa da falha ao apagar a pasta de build ainda não foi confirmada.
-- **Próximo passo.** Executar num dispositivo Android. Se a falha da pasta de build também ocorrer nesse destino, parar a execução do Flutter, limpar a build e repetir.
-- **Validação.** A abertura da aplicação ainda está por confirmar.
+- **Solução.** Adicionar suporte Web, usar localhost para aceder à API no Chrome e permitir a origem local do Flutter. A seleção e o envio de fotografias passaram a usar os bytes da imagem.
+- **Validação.** A compilação Web passou e a API respondeu ao pedido CORS da origem http://localhost:8080. O utilizador confirmou que a app abriu no Chrome e mostrou os cuidados da conta. O envio de uma fotografia no navegador ainda está por testar.
 
 ### 7. O aapt falhou ao ler o APK no caminho original
 
@@ -84,3 +84,10 @@ Guardar comandos e caminhos úteis sem incluir palavras-passe, tokens ou chaves.
 - **Problema.** O Gradle voltou a falhar em `:app:cleanMergeDebugAssets` no caminho local.
 - **Solução.** Parar o daemon do Gradle, renomear a pasta gerada `app/build` para a preservar temporariamente e recompilar. A limpeza de `.dart_tool` ainda deu um aviso, mas a resolução de dependências prosseguiu.
 - **Validação.** A build em C:\dev gerou o APK, instalou-o no emulador e iniciou o Flutter. O processo que bloqueou a limpeza inicial ainda não foi identificado.
+
+### Login com a API local parada
+
+- **Problema.** A app no emulador mostrou um erro de servidor ao tentar iniciar sessão.
+- **Diagnóstico.** O Flutter apontava para `10.0.2.2:3000`, mas o computador recusava ligações à porta 3000.
+- **Solução.** Iniciar a API com `npm run dev` na pasta `api`.
+- **Validação.** A API iniciou, ligou ao MongoDB Atlas e o endpoint `/health/database` respondeu com sucesso. O login na app precisa de ser repetido.

@@ -1,3 +1,5 @@
+import 'package:image_picker/image_picker.dart';
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -73,16 +75,17 @@ class ApiClient {
   Future<Map<String, dynamic>> sendPhoto(
     String method,
     String path,
-    String filePath,
+    XFile photo,
   ) {
     return _send(() async {
       final request =
           http.MultipartRequest(method, Uri.parse('$apiBaseUrl$path'))
             ..headers.addAll(authHeader)
             ..files.add(
-              await http.MultipartFile.fromPath(
+              http.MultipartFile.fromBytes(
                 'photo',
-                filePath,
+                await photo.readAsBytes(),
+                filename: photo.name,
                 // A API só aceita imagens; a câmara grava em JPEG.
                 contentType: MediaType('image', 'jpeg'),
               ),

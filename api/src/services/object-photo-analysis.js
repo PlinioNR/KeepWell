@@ -79,7 +79,10 @@ export async function analyzeObjectPhoto(buffer) {
     throw Object.assign(new Error('Nao foi possivel analisar a fotografia. Podes continuar manualmente.'), { status });
   }
 
-  const name = cleanText(result.name, 100, 2);
+  const suggestedName = typeof result.name === 'string'
+    ? result.name.replace(/\p{L}/u, letter => letter.toLocaleUpperCase('pt-PT'))
+    : null;
+  const name = cleanText(suggestedName, 100, 2);
   const suggestedTasks = [];
   const titles = new Set();
   for (const suggestion of name ? result.suggestedTasks : []) {

@@ -8,3 +8,13 @@ Arranque rápido, dentro desta pasta:
 flutter pub get
 flutter run
 ```
+
+Para testar no Chrome, inicia a API na pasta `api` com `npm run dev`.
+Na pasta `app`, executa:
+
+```powershell
+flutter run -d chrome --web-hostname localhost --web-port 8080
+```
+
+A app Web usa `http://localhost:3000` e a API permite pedidos da origem
+`http://localhost:8080`. No Chrome, seleciona a fotografia de um ficheiro.

@@ -1,3 +1,4 @@
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -47,7 +48,7 @@ class _AddObjectScreenState extends State<AddObjectScreen> {
   DateTime? _acquiredOn;
 
   // Caminho da fotografia no telemóvel (opcional, por isso pode ser null).
-  String? _photoPath;
+  XFile? _photo;
 
   bool _isLoading = false;
 
@@ -80,16 +81,16 @@ class _AddObjectScreenState extends State<AddObjectScreen> {
   ///
   /// A resposta só preenche um campo se estiver vazio ou ainda tiver a
   /// sugestão da foto anterior: nunca apaga o que a pessoa escreveu.
-  Future<void> _onPhotoPicked(String path) async {
+  Future<void> _onPhotoPicked(XFile photo) async {
     setState(() {
-      _photoPath = path;
+      _photo = photo;
       _isAnalyzing = true;
     });
 
     try {
-      final result = await _objectService.analyzePhoto(path);
+      final result = await _objectService.analyzePhoto(photo);
       // Se entretanto trocou de foto, esta resposta já não interessa.
-      if (!mounted || path != _photoPath) return;
+      if (!mounted || photo != _photo) return;
       final name = _nameController.text.trim();
       setState(() {
         if (name.isEmpty || name == _suggestedName) {
@@ -107,10 +108,10 @@ class _AddObjectScreenState extends State<AddObjectScreen> {
       }
     } on ApiException catch (error) {
       // A análise é uma ajuda: se falhar, preenche-se à mão.
-      if (mounted && path == _photoPath) _showMessage(error.message);
+      if (mounted && photo == _photo) _showMessage(error.message);
     }
 
-    if (mounted && path == _photoPath) setState(() => _isAnalyzing = false);
+    if (mounted && photo == _photo) setState(() => _isAnalyzing = false);
   }
 
   /// Mostra uma mensagem curta no fundo do ecrã.
@@ -174,9 +175,9 @@ class _AddObjectScreenState extends State<AddObjectScreen> {
             );
 
       // 2.º pedido (só se houver foto): envia a fotografia desse objeto.
-      if (_photoPath != null) {
+      if (_photo != null) {
         try {
-          await _objectService.uploadPhoto(object.id, _photoPath!);
+          await _objectService.uploadPhoto(object.id, _photo!);
         } on ApiException catch (error) {
           // O objeto já ficou guardado; avisamos só que a foto falhou.
           if (mounted) {
@@ -224,7 +225,7 @@ class _AddObjectScreenState extends State<AddObjectScreen> {
                   padding: const EdgeInsets.all(AppSpacing.md),
                   children: [
                     PhotoPickerBox(
-                      photoPath: _photoPath,
+                      photo: _photo,
                       photoUrl: widget.object?.photoUrl,
                       onPicked: _onPhotoPicked,
                     ),

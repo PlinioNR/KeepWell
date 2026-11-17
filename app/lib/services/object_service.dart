@@ -1,3 +1,5 @@
+import 'package:image_picker/image_picker.dart';
+
 import '../models/category.dart';
 import '../models/user_object.dart';
 import 'api_client.dart';
@@ -61,13 +63,9 @@ class ObjectService {
 
   /// Envia a fotografia de um objeto: PUT /objects/:id/photo.
   ///
-  /// [filePath] é o caminho do ficheiro no telemóvel (vem da câmara).
-  Future<UserObject> uploadPhoto(String objectId, String filePath) async {
-    final body = await _api.sendPhoto(
-      'PUT',
-      '/objects/$objectId/photo',
-      filePath,
-    );
+  /// [photo] é o ficheiro escolhido pelo utilizador.
+  Future<UserObject> uploadPhoto(String objectId, XFile photo) async {
+    final body = await _api.sendPhoto('PUT', '/objects/$objectId/photo', photo);
     return UserObject.fromJson(body['object'] as Map<String, dynamic>);
   }
 
@@ -76,12 +74,8 @@ class ObjectService {
   ///
   /// Devolve {'name': ..., 'categoryId': ...}; cada um pode vir null
   /// se o Gemini não tiver a certeza.
-  Future<Map<String, dynamic>> analyzePhoto(String filePath) async {
-    final body = await _api.sendPhoto(
-      'POST',
-      '/objects/photo-analysis',
-      filePath,
-    );
+  Future<Map<String, dynamic>> analyzePhoto(XFile photo) async {
+    final body = await _api.sendPhoto('POST', '/objects/photo-analysis', photo);
     return body['object'] as Map<String, dynamic>;
   }
 
