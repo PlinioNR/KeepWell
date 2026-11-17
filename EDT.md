@@ -4,6 +4,8 @@ Estado: níveis 1 e 2 validados pelo Plinio (02/11/2026). Nível 3 completo prop
 Entrega: PDF "GP-2627-E2-G1.pdf" até 06/11/2026 23h59. O enunciado pede: lista de todas as tarefas e organização lógica das tarefas (sem dicionário da EDT).
 Legenda: ✅ concluído · ◐ iniciado · sem marca = planeado.
 
+Alteração de âmbito (17/11/2026, combinada com o professor): o administrador global sai e entram **casas** com convite por código e três papéis (dono, gestor, membro). Categorias fixas; dicas geridas por dono e gestor. Especificação em `docs/casas.md`. Itens afetados marcados com (casas).
+
 ## 1. Gestão do projeto
 - 1.1 Termo de Abertura ✅
 - 1.2 Estrutura de Decomposição do Trabalho (EDT) ◐
@@ -29,7 +31,7 @@ Legenda: ✅ concluído · ◐ iniciado · sem marca = planeado.
   - 2.2.1 Regras de eliminação
   - 2.2.2 Regras do histórico e da repetição de tarefas
   - 2.2.3 Lista inicial de categorias
-  - 2.2.4 Criação da conta de administrador
+  - 2.2.4 Regras da casa: papéis, convites e permissões (casas; substitui a criação do administrador)
 - 2.3 Diagramas UML
   - 2.3.1 Diagrama de casos de uso
   - 2.3.2 Diagrama de classes / modelo de dados
@@ -44,7 +46,7 @@ Legenda: ✅ concluído · ◐ iniciado · sem marca = planeado.
   - 3.1.2 Sessões
   - 3.1.3 Análise de resultados
 - 3.2 Arquitetura de informação e navegação
-  - 3.2.1 Mapa de navegação
+  - 3.2.1 Mapa de navegação ✅ (página Information Architecture do Figma; atualizado para as casas a 17/11)
   - 3.2.2 Fluxos principais
 - 3.3 Sistema de design ◐
   - 3.3.1 Fundações: cor, tipografia, espaçamento e grelha ✅
@@ -55,7 +57,7 @@ Legenda: ✅ concluído · ◐ iniciado · sem marca = planeado.
   - 3.3.6 Publicação da biblioteca
 - 3.4 Protótipo interativo
   - 3.4.1 Ecrãs do utilizador comum ◐
-  - 3.4.2 Ecrãs do administrador ◐
+  - 3.4.2 Ecrãs da casa (membros, convite) e das dicas (casas; os ecrãs do administrador 15–17 saem)
   - 3.4.3 Ajustes ao âmbito (arquivar Recuperar acesso) e ecrãs em falta
   - 3.4.4 Ligações, transições e overlays
   - 3.4.5 Handoff e revisão cruzada
@@ -72,22 +74,25 @@ Legenda: ✅ concluído · ◐ iniciado · sem marca = planeado.
 - 4.1 Projeto base da API
   - 4.1.1 Projeto Node.js/Express e estrutura de pastas
   - 4.1.2 Ligação à base de dados MongoDB
-  - 4.1.3 Dados iniciais (categorias, administrador, exemplos)
+  - 4.1.3 Dados iniciais (categorias, casa de demonstração com dono, gestor e membro, exemplos)
 - 4.2 Modelos de dados
-  - 4.2.1 Utilizador
+  - 4.2.1 Utilizador (com casa e papel)
   - 4.2.2 Categoria
   - 4.2.3 Objeto
   - 4.2.4 Tarefa de manutenção
-  - 4.2.5 Dica
+  - 4.2.5 Dica (passa a pertencer a uma casa)
+  - 4.2.6 Casa (casas)
 - 4.3 Autenticação e permissões
   - 4.3.1 Registo e início de sessão
-  - 4.3.2 Proteção das rotas por perfil (utilizador/administrador)
+  - 4.3.2 Proteção das rotas por papel na casa (dono/gestor/membro) (casas)
 - 4.4 Endpoints da API
   - 4.4.1 Objetos (CRUD, pesquisa e filtro)
   - 4.4.2 Tarefas (CRUD, concluir e histórico)
   - 4.4.3 Repetição de tarefas
-  - 4.4.4 Categorias (CRUD do administrador)
-  - 4.4.5 Dicas (consulta e CRUD do administrador)
+  - 4.4.4 Categorias (lista fixa, só consulta) (casas)
+  - 4.4.5 Dicas (consulta; gestão por dono e gestor) (casas)
+  - 4.4.6 Casa e convites (código, entrar, sair, papéis) (casas)
+  - 4.4.7 Migração dos dados existentes para casas (casas)
 - 4.5 Fotografias
   - 4.5.1 Envio e armazenamento
   - 4.5.2 Disponibilização das imagens à app
@@ -115,16 +120,17 @@ Legenda: ✅ concluído · ◐ iniciado · sem marca = planeado.
   - 5.4.1 Lista com filtros por estado ✅ (separador Cuidados com chips Todos/Pendentes/Em atraso/Concluídos; testado no emulador a 12/11)
   - 5.4.2 Adicionar e editar cuidado ◐ (adicionar a partir do Detalhe testado no emulador a 12/11; também pelo + do separador Cuidados; sem repetição nem lembrete; falta editar)
   - 5.4.3 Detalhe, conclusão e eliminação ◐ (concluir ao tocar no círculo da lista, com confirmação, feito a 12/11; falta testar no emulador, ecrã 12 Detalhe e eliminar)
-  - 5.4.4 Lembretes (notificações locais)
-  - 5.4.5 Repetição de tarefas
+  - 5.4.4 Lembretes (notificações locais) — a cortar se faltar tempo (casas)
+  - 5.4.5 Repetição de tarefas — a cortar primeiro (casas)
 - 5.5 Dicas
   - 5.5.1 Consulta de dicas por categoria
 - 5.6 Perfil
   - 5.6.1 Definições e modo escuro
-- 5.7 Administração
-  - 5.7.1 Painel de administração
-  - 5.7.2 Gestão de categorias
-  - 5.7.3 Gestão de dicas
+- 5.7 Casa (casas; substitui a Administração)
+  - 5.7.1 A minha casa (membros e papéis)
+  - 5.7.2 Código de convite e entrar numa casa
+  - 5.7.3 Gestão de dicas (dono e gestor)
+  - 5.7.4 Ações escondidas conforme o papel
 - 5.8 Acabamentos
   - 5.8.1 Estados de carregamento, erro e lista vazia
   - 5.8.2 Validação de formulários
@@ -136,7 +142,7 @@ Legenda: ✅ concluído · ◐ iniciado · sem marca = planeado.
   - 6.1.1 Percurso principal (objeto → tarefa → conclusão → histórico)
   - 6.1.2 Persistência dos dados
 - 6.2 Testes de permissões e erros
-  - 6.2.1 Acesso por perfil
+  - 6.2.1 Acesso por papel na casa (casas)
   - 6.2.2 Formulários inválidos e eliminações
   - 6.2.3 Falhas de ligação
   - 6.2.4 Câmara e notificações sem permissão

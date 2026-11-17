@@ -28,9 +28,9 @@ ODS 12: meta 12.5 (principal, prevenção de resíduos), 12.2 (complementar). Im
 - Objetos: CRUD, 1 foto pela câmara, categoria, pesquisa por nome, filtro por categoria.
 - Tarefas: CRUD, associada a objeto, data prevista, concluir (guarda data de realização), histórico do objeto.
 - Dicas: consulta por categoria.
-- Admin: CRUD de categorias e dicas.
+- Casa (17/11, substitui o Admin): membros, papéis e convite por código; dicas geridas por dono e gestor; categorias fixas.
 - Simplificações: 1 foto/objeto; sem repetição automática; tarefas concluídas = histórico (modelação técnica por definir).
-- Perfis: utilizador comum (só os seus dados) e administrador (categorias e dicas). Permissões verificadas na API. Registo público cria só utilizadores comuns; criação do admin por definir.
+- Perfis (decisão 17/11 com o professor, substitui o administrador global; ainda NÃO implementado): casas. Ao criar conta, a pessoa fica dona de uma casa; convida outros por código (8 caracteres, 7 dias); uma casa por pessoa; 3 papéis fixos: dono e gestor podem tudo (o dono também muda papéis e remove pessoas), membro só vê e adiciona objetos. Categorias fixas (seed); dicas por casa, geridas por dono e gestor. Objetos, cuidados e dicas passam a ser da casa. Especificação completa em `docs/casas.md` (API para o Rafael + app). Cortes previstos: lembretes e repetição na app. Falta confirmar com o professor que os papéis contam como "≥2 tipos de utilizador". Até à migração, a API ainda tem user/admin (`promote-admin.js`, `seed:demo` com admin@).
 - Decisão 02/11: entram no âmbito (porque estão nos ecrãs do Figma) repetição de tarefas, lembretes/notificações e modo escuro na app.
 - Fora do âmbito: recuperar acesso (ecrã 04 vai para o Archive), várias fotos, cálculo de impacto ambiental.
 - Preferência do Plinio: quanto mais simples, melhor. Propor sempre a versão mais simples que cumpra os requisitos.
