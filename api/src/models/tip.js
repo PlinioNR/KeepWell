@@ -6,6 +6,7 @@ export async function setupTips(database) {
       properties: {
         _id: { bsonType: 'objectId' },
         categoryId: { bsonType: 'objectId' },
+        houseId: { bsonType: 'objectId' },
         title: { bsonType: 'string', minLength: 2, maxLength: 120 },
         text: { bsonType: 'string', minLength: 1, maxLength: 3000 },
         createdAt: { bsonType: 'date' },

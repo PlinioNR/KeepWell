@@ -829,6 +829,15 @@ de uma casa extra quando o email está duplicado.
 npm.cmd run migrate:house-memberships conta as contas sem casa.
 Com npm.cmd run migrate:house-memberships -- --apply, cria uma casa para cada
 uma e atribui-lhe houseRole owner. O comando pode ser repetido. Esta etapa
-migra apenas a associação das contas. Objetos, cuidados, dicas e permissões
-serão tratados na etapa seguinte. A aplicação na base partilhada deve ser
-coordenada com a equipa.
+migra a associação das contas.
+
+npm.cmd run migrate:house-data mostra quantos objetos, cuidados e dicas ainda
+precisam de casa. Para aplicar numa base de teste, para a API, corre db:setup e
+aplica primeiro a migração das contas. Depois corre
+npm.cmd run migrate:house-data -- --apply.
+
+Os objetos recebem houseId e createdBy. Os cuidados recebem houseId, mantendo
+a referência ao objeto. As dicas globais passam para a casa de ana@keepwell.test.
+Nesta fase, os campos antigos continuam em uso pelas rotas. Repete a migração
+depois de parar a API na mudança para as rotas por casa, para apanhar dados
+criados entretanto. Coordena a execução na base partilhada com a equipa.
