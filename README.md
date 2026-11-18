@@ -1,8 +1,8 @@
 # KeepWell
 
-> Cuide dos seus objetos e faça-os durar mais tempo.
+> Cuide dos objetos da sua casa e faça-os durar mais tempo.
 
-O **KeepWell** é uma aplicação móvel Android que ajuda as pessoas a cuidar dos seus objetos — eletrodomésticos, móveis, bicicletas, equipamentos eletrónicos — para que durem mais tempo. Permite registar objetos com fotografia, criar tarefas de manutenção com lembretes, consultar o histórico de cuidados de cada objeto e ler dicas de conservação.
+O **KeepWell** é uma aplicação móvel Android para organizar a manutenção dos objetos de uma casa, como eletrodomésticos, móveis e bicicletas. Cada pessoa regista objetos com fotografia, planeia cuidados conforme o seu papel e consulta o histórico. A partilha por casa permitirá aos membros acompanhar os mesmos objetos, cuidados e dicas.
 
 Projeto Interdisciplinar 2 do CTeSP em **Design e Tecnologias para Aplicações Móveis** (ESMAD, 2026/2027).
 
@@ -13,7 +13,7 @@ Projeto Interdisciplinar 2 do CTeSP em **Design e Tecnologias para Aplicações 
 1. [Problema e objetivo](#1-problema-e-objetivo)
 2. [Público-alvo](#2-público-alvo)
 3. [Funcionalidades](#3-funcionalidades)
-4. [Tipos de utilizador](#4-tipos-de-utilizador)
+4. [Papéis na casa](#4-papéis-na-casa)
 5. [Tecnologias](#5-tecnologias)
 6. [Estrutura do repositório](#6-estrutura-do-repositório)
 7. [Como correr a app](#7-como-correr-a-app)
@@ -29,7 +29,7 @@ Projeto Interdisciplinar 2 do CTeSP em **Design e Tecnologias para Aplicações 
 
 **Problema.** As pessoas esquecem-se de fazer a manutenção dos seus objetos e não guardam registo do que já foi feito. Muitos objetos avariam antes do tempo e acabam por ser substituídos, o que traz mais despesa e mais desperdício.
 
-**Objetivo.** Criar uma app que torne a manutenção simples e regular: registar o objeto, planear o cuidado, receber um lembrete, marcar como feito e ver o histórico.
+**Objetivo.** Criar uma app que torne a manutenção simples e regular: registar o objeto, planear o cuidado, marcar como feito e consultar o histórico.
 
 **Enquadramento no ODS 12 — Produção e Consumo Responsáveis**
 - **Meta 12.5** (principal): prevenir resíduos, incentivando a conservação e evitando o descarte antecipado.
@@ -50,35 +50,38 @@ Adultos entre os 20 e os 45 anos que vivem de forma independente (estudantes des
 
 ## 3. Funcionalidades
 
-| Área | Funcionalidade |
+| Área | Funcionalidade prevista |
 |---|---|
-| **Conta** | Criar conta, entrar e terminar sessão |
-| **Objetos** | Adicionar, ver, listar, editar e eliminar · fotografia tirada com a câmara · categoria · pesquisa por nome e filtro por categoria |
-| **Análise de fotografias** | API Gemini sugere nome, categoria e cuidados antes de guardar o objeto · integração com o formulário pendente |
-| **Cuidados** (tarefas de manutenção) | Criar, ver, listar, editar e eliminar · associados a um objeto · data prevista · marcar como concluído (guarda a data) · lembretes · repetição |
-| **Histórico** | Cuidados concluídos do mais recente ao mais antigo e evento de criação do objeto |
-| **Dicas** | Dicas de conservação por categoria |
-| **Perfil** | Definições e modo escuro |
-| **Administração** | Gerir categorias e gerir dicas |
+| **Conta** | Criar conta, entrar e terminar sessão. O registo cria automaticamente a casa inicial. |
+| **Casa** | Consultar membros e papéis, convidar por código, entrar noutra casa e gerir membros conforme o papel. Cada pessoa pertence a uma casa de cada vez. |
+| **Objetos** | Registar uma fotografia, pesquisar por nome e filtrar por categoria. A edição e a eliminação dependem do papel na casa. |
+| **Análise de fotografias** | O Gemini sugere o nome e a categoria no formulário. A API também devolve sugestões de cuidados. |
+| **Cuidados** | Planear um cuidado para um objeto, definir a data e marcá-lo como concluído. |
+| **Histórico** | Consultar o evento de criação do objeto e os cuidados concluídos, com a data e as observações da conclusão. |
+| **Categorias** | Consultar um catálogo fixo partilhado por todas as casas. |
+| **Dicas** | Consultar dicas de conservação da casa por categoria. Dono e gestor podem geri-las. |
+| **Perfil** | Definições da conta e modo escuro. |
 
-**Simplificações assumidas:** uma fotografia por objeto; sem recuperação de palavra-passe.
+Lembretes locais e repetição de cuidados ficam fora da prioridade da app nesta fase.
 
-## 4. Tipos de utilizador
+## 4. Papéis na casa
 
-| Perfil | Pode fazer |
+| Papel | Permissões previstas |
 |---|---|
-| **Utilizador** | Gerir apenas os seus objetos e cuidados; consultar o seu histórico e as dicas |
-| **Administrador** | Gerir as categorias e as dicas de conservação |
+| **Dono** | Consulta e gere os dados da casa, renomeia a casa, gera convites, muda papéis e remove membros. |
+| **Gestor** | Consulta e gere objetos, cuidados e dicas. Pode renomear a casa, gerar convites e sair da casa. |
+| **Membro** | Consulta objetos, fotos, cuidados, histórico, dicas e membros. Pode adicionar objetos e enviar a fotografia de um objeto que criou. Pode sair da casa. |
 
-O registo público cria sempre utilizadores comuns. As permissões são verificadas na API, não apenas na app.
+Cada conta começa como dona da sua casa. Para aceitar um convite, a casa atual deve ter apenas essa pessoa, sem objetos nem dicas. O código tem oito caracteres, dura sete dias e permite a entrada como membro. A API vai verificar o papel em cada operação protegida. As regras completas estão na [especificação de casas](docs/casas.md).
 
 ## 5. Tecnologias
 
 | Parte | Tecnologia |
 |---|---|
-| App móvel | [Flutter](https://flutter.dev) (Dart), apenas Android |
+| App móvel | [Flutter](https://flutter.dev) (Dart), Android para a demonstração e Chrome para testes locais |
 | API | Node.js + Express (API REST) |
-| Base de dados | MongoDB |
+| Base de dados | MongoDB Atlas |
+| Análise de fotografias | Google Gemini |
 | Design | Figma (protótipo e sistema de design) |
 | Controlo de versões | Git + GitHub |
 
@@ -112,6 +115,7 @@ KeepWell/
 │   ├── test/                   Testes automáticos
 │   └── pubspec.yaml            Dependências e recursos da app
 ├── api/                        API Node.js/Express (em desenvolvimento)
+├── docs/casas.md               Especificação de casas e permissões
 ├── docs/gp/                    Entregas de Gestão de Projetos
 ├── EDT.md                      Estrutura de Decomposição do Trabalho
 ├── CLAUDE.md                   Contexto e regras do projeto
@@ -147,6 +151,16 @@ A linha **Android toolchain** tem de aparecer com `[√]`. A linha do Visual Stu
    ```bash
    flutter run
    ```
+
+Para usar o login e os dados da casa, configura e inicia a API num terminal separado.
+A API usa Node.js 24 ou superior e um ficheiro local `api/.env`.
+Segue os passos de preparação no [README da API](api/README.md).
+
+Também podes experimentar no Chrome, a partir de `KeepWell/app`, com a API ligada.
+
+```bash
+flutter run -d chrome --web-hostname localhost --web-port 8080
+```
 
 ### Durante o desenvolvimento
 | Tecla no terminal do `flutter run` | O que faz |
@@ -216,29 +230,17 @@ O código é escrito por dois estudantes a aprender Flutter, por isso segue regr
 
 ## 11. Estado do projeto
 
-✅ concluído · ◐ em curso · ⬜ por fazer
-
-| Parte | Estado |
+| Parte | Estado atual |
 |---|---|
-| Tema da app (claro/escuro) a partir do Figma | ✅ |
-| Ecrã de boas-vindas | ✅ |
-| Ecrãs Entrar e Criar conta (interface e validação) | ◐ falta ligar à API |
-| API e base de dados | ◐ em desenvolvimento |
-| Objetos com fotografia | ⬜ |
-| Cuidados, conclusão e histórico | ◐ API disponível |
-| Análise de fotografias com Gemini | ◐ API testada manualmente, integração Flutter pendente |
-| Dicas | ⬜ |
-| Administração de categorias e dicas | ⬜ |
-| Perfil e modo escuro manual | ⬜ |
-| Lembretes (notificações) | ⬜ |
-| Repetição de tarefas | ⬜ |
-| Animações e acabamentos | ⬜ |
+| Conta | Registo e login ligados à API e testados no emulador. |
+| Objetos | Criação, consulta, pesquisa, filtros e fotografia disponíveis na app. |
+| Cuidados e histórico | Criação e conclusão ligadas à app. A API disponibiliza edição, histórico, descrição e observações de conclusão. |
+| Análise de fotografias | Preenchimento de nome e categoria testado no Chrome. As sugestões de cuidados estão disponíveis na API. |
+| Casas e papéis | Modelo e criação da casa no registo implementados no código. Validação da transação e da migração no MongoDB pendente. Convites e gestão de membros por implementar. |
+| Migração dos dados | Script de associação de contas a casas preparado. A migração da base partilhada e dos objetos, cuidados e dicas está pendente. |
+| Permissões, categorias e dicas | A API ainda usa os papéis globais anteriores. O acesso por casa, o catálogo só de leitura e a gestão de dicas por casa estão pendentes. |
 
-A configuração e os exemplos de teste estão no [README da API](api/README.md).
-
-Os problemas, soluções e testes ficam no [diário técnico](docs/diario-tecnico.md).
-
-O planeamento completo está em [EDT.md](EDT.md).
+Os comandos da API estão no [README da API](api/README.md). Os problemas e testes estão no [diário técnico](docs/diario-tecnico.md). O planeamento completo está no [EDT](EDT.md).
 
 ## 12. Equipa
 

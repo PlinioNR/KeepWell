@@ -1,4 +1,5 @@
 import { connectDatabase, closeDatabase } from '../database.js';
+import { setupHouses } from '../models/house.js';
 import { setupUsers } from '../models/user.js';
 import { setupSessions } from '../models/session.js';
 import { setupCategories } from '../models/category.js';
@@ -9,13 +10,14 @@ import { setupTips } from '../models/tip.js';
 // Prepara apenas a estrutura: não cria contas nem guarda palavras-passe.
 try {
   const database = await connectDatabase();
+  await setupHouses(database);
   await setupUsers(database);
   await setupSessions(database);
   await setupCategories(database);
   await setupObjects(database);
   await setupTasks(database);
   await setupTips(database);
-  console.log('Coleções users, sessions, categories, objects, tasks e tips preparadas com validação e índices.');
+  console.log('Coleções houses, users, sessions, categories, objects, tasks e tips preparadas com validação e índices.');
 } catch {
   console.error('Não foi possível preparar a base de dados. Verifica a ligação, as permissões e eventuais dados/índices existentes.');
   process.exitCode = 1;

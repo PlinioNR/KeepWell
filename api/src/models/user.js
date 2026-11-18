@@ -4,6 +4,7 @@ export const userValidator = {
     bsonType: 'object',
     required: ['name', 'email', 'passwordHash', 'role', 'createdAt', 'updatedAt'],
     additionalProperties: false,
+    dependencies: { houseId: ['houseRole'], houseRole: ['houseId'] },
     properties: {
       _id: { bsonType: 'objectId' },
       name: { bsonType: 'string', minLength: 2, maxLength: 100, pattern: '^\\S(?:[\\s\\S]*\\S)$' },
@@ -13,6 +14,8 @@ export const userValidator = {
       },
       passwordHash: { bsonType: 'string', minLength: 1 },
       role: { enum: ['user', 'admin'] },
+      houseId: { bsonType: 'objectId' },
+      houseRole: { enum: ['owner', 'manager', 'member'] },
       preferences: {
         bsonType: 'object', additionalProperties: false,
         properties: {
@@ -62,6 +65,7 @@ export function toPublicUser(user) {
       theme: user.preferences?.theme ?? 'system',
       remindersEnabled: user.preferences?.remindersEnabled ?? false
     },
+    ...(user.houseId && { houseId: user.houseId.toString(), houseRole: user.houseRole }),
     role: user.role, createdAt: user.createdAt, updatedAt: user.updatedAt
   };
 }

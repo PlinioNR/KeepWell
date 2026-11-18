@@ -1,6 +1,8 @@
 # KeepWell API
 
-Servidor Node.js com Express e código de ligação ao MongoDB Atlas. A ligação real depende das credenciais no .env. Registo, login, sessões, categorias e criação/consulta de objetos implementados; CRUD, pesquisa e filtro de objetos implementados; fotografia e tarefas ainda pendentes.
+API REST do KeepWell em Node.js e Express, com MongoDB Atlas. A API disponibiliza contas, objetos, fotografias, cuidados, histórico, categorias e dicas.
+
+A transição para casas começou pelo modelo de dados e pela criação da casa no registo. Os exemplos das rotas existentes descrevem as permissões atuais. As regras previstas estão na [especificação de casas](../docs/casas.md).
 
 ## Requisitos
 
@@ -812,3 +814,21 @@ GET /tasks, GET /tasks/:id, GET /tasks/reminders e GET /objects/:id/history
 incluem objectName em cada cuidado. O nome é obtido do objeto atual, sem o
 duplicar no documento da tarefa. Se a referência não puder ser resolvida na
 conta autenticada, a listagem e o detalhe devolvem objectName: null.
+
+## Transição para casas
+
+O registo cria uma conta e a sua casa na mesma transação. A resposta do registo,
+do login e de GET /auth/me inclui houseId e houseRole quando a conta tem casa.
+Durante esta etapa, a API ainda usa role nas permissões existentes.
+
+Numa base de desenvolvimento, corre npm.cmd run db:setup antes de testar o
+registo. O comando prepara houses e permite que users guarde os novos campos.
+O teste npm.cmd run test:integration verifica a criação da casa e a ausência
+de uma casa extra quando o email está duplicado.
+
+npm.cmd run migrate:house-memberships conta as contas sem casa.
+Com npm.cmd run migrate:house-memberships -- --apply, cria uma casa para cada
+uma e atribui-lhe houseRole owner. O comando pode ser repetido. Esta etapa
+migra apenas a associação das contas. Objetos, cuidados, dicas e permissões
+serão tratados na etapa seguinte. A aplicação na base partilhada deve ser
+coordenada com a equipa.

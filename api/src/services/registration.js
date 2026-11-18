@@ -1,4 +1,5 @@
-import { getDatabase } from '../database.js';
+import { withDatabaseTransaction } from '../database.js';
+import { buildHouse } from '../models/house.js';
 import { buildUser, toPublicUser } from '../models/user.js';
 import { hashPassword, validatePassword } from '../security/password.js';
 
@@ -28,8 +29,12 @@ export async function registerUser(body) {
   const user = buildUser({ name, email, passwordHash });
   try {
     // O índice único impede duplicados mesmo quando os pedidos chegam ao mesmo tempo.
-    const result = await getDatabase().collection('users').insertOne(user);
-    return toPublicUser({ ...user, _id: result.insertedId });
+    return await withDatabaseTransaction(async (database, session) => {
+      const { insertedId: houseId } = await database.collection('houses').insertOne(buildHouse(user.name), { session });
+      const owner = { ...user, houseId, houseRole: 'owner' };
+      const { insertedId: userId } = await database.collection('users').insertOne(owner, { session });
+      return toPublicUser({ ...owner, _id: userId });
+    });
   } catch (error) {
     if (error.code === 11000) {
       throw Object.assign(new Error('Já existe uma conta com este email.'), { status: 409 });
