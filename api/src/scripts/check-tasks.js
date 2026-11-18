@@ -13,6 +13,7 @@ import { buildTask } from '../models/task.js';
 const marker = randomUUID();
 const emails = [`task-a-${marker}@example.com`, `task-b-${marker}@example.com`];
 const userIds = [];
+const houseIds = [];
 let database;
 let categoryId;
 let server;
@@ -22,12 +23,13 @@ try {
   for (const email of emails) {
     const user = await registerUser({ name: 'Teste Cuidados', email, password: 'TesteCuidados123!' });
     userIds.push(new ObjectId(user.id));
+    houseIds.push(new ObjectId(user.houseId));
     tokens.push((await loginUser({ email, password: 'TesteCuidados123!' })).token);
   }
   const category = await createCategory({ name: `Cuidados-${marker}` });
   categoryId = new ObjectId(category.id);
-  const object = await createObject({ name: 'Objeto A', categoryId: category.id }, userIds[0]);
-  const otherObject = await createObject({ name: 'Objeto B', categoryId: category.id }, userIds[1]);
+  const object = await createObject({ name: 'Objeto A', categoryId: category.id }, userIds[0], houseIds[0]);
+  const otherObject = await createObject({ name: 'Objeto B', categoryId: category.id }, userIds[1], houseIds[1]);
   await new Promise(resolve => { server = app.listen(0, '127.0.0.1', resolve); });
   const base = `http://127.0.0.1:${server.address().port}/tasks`;
   const request = (index, method, path = '', body) => fetch(base + path, {
@@ -66,7 +68,7 @@ try {
   list = await response.json();
   assert.equal(list.tasks[0].id, created.task.id);
   assert.equal((await request(0, 'GET', '?userId=externo')).status, 400);
-  await assert.rejects(deleteObject(object.id, userIds[0]), { status: 409 });
+  await assert.rejects(deleteObject(object.id, { houseId: houseIds[0] }), { status: 409 });
   await assert.rejects(database.collection('tasks').insertOne({
     ...buildTask(valid, userIds[0]), completedAt: new Date()
   }), { code: 121 });
@@ -125,7 +127,7 @@ try {
   assert.equal(emptyHistoryBody.total, 0);
   assert.deepEqual(emptyHistoryBody.events, [{ type: 'object_added', occurredAt: otherObject.createdAt.toISOString() }]);
   assert.equal((await fetch(historyUrl + '?pageSize=101', auth(0))).status, 400);
-  await assert.rejects(deleteObject(object.id, userIds[0]), { status: 409 });
+  await assert.rejects(deleteObject(object.id, { houseId: houseIds[0] }), { status: 409 });
   const editable = await createTask({ ...valid, dueOn: '2099-01-01' }, userIds[0]);
   const overdue = await createTask({ ...valid, dueOn: '2000-01-01' }, userIds[0]);
   assert.equal((await request(1, 'PATCH', `/${editable.id}`, { title: 'Outro título' })).status, 404);
@@ -248,10 +250,10 @@ try {
   assert.ok(Object.values(notifications).flat().every(item => item.objectId !== otherObject.id));
   const otherFeed = await (await fetch(notificationsUrl, auth(1))).json();
   assert.ok(Object.values(otherFeed).flat().every(item => item.objectId !== object.id));
-  const raceObject = await createObject({ name: 'Objeto concorrente', categoryId: category.id }, userIds[0]);
+  const raceObject = await createObject({ name: 'Objeto concorrente', categoryId: category.id }, userIds[0], houseIds[0]);
   const results = await Promise.allSettled([
     createTask({ ...valid, objectId: raceObject.id }, userIds[0]),
-    deleteObject(raceObject.id, userIds[0])
+    deleteObject(raceObject.id, { houseId: houseIds[0] })
   ]);
   assert.ok(results.some(result => result.status === 'fulfilled'));
   const raceId = new ObjectId(raceObject.id);
@@ -265,6 +267,7 @@ try {
     await database.collection('objects').deleteMany({ userId: { $in: userIds } });
     await database.collection('sessions').deleteMany({ userId: { $in: userIds } });
     await database.collection('users').deleteMany({ _id: { $in: userIds }, email: { $in: emails } });
+    await database.collection('houses').deleteMany({ _id: { $in: houseIds } });
     if (categoryId) await database.collection('categories').deleteOne({ _id: categoryId });
     await database.collection('categories').deleteOne({ name: `Cuidados-${marker}` });
     console.log('Cuidados, objetos, contas, categorias e sessões temporários removidos.');

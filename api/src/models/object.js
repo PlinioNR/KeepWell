@@ -65,6 +65,7 @@ export async function setupObjects(database) {
         photoKey: { bsonType: ['string', 'null'], pattern: '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\\.jpg$' },
         description: { bsonType: 'string', maxLength: 1000 },
         acquiredOn: { bsonType: ['string', 'null'], pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
+        houseId: { bsonType: 'objectId' }, createdBy: { bsonType: 'objectId' },
         userId: { bsonType: 'objectId' }, categoryId: { bsonType: 'objectId' },
         createdAt: { bsonType: 'date' }, updatedAt: { bsonType: 'date' }
       }

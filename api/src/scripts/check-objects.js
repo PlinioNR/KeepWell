@@ -12,6 +12,7 @@ import { createObject } from '../services/objects.js';
 const marker = randomUUID();
 const emails = [`object-a-${marker}@example.com`, `object-b-${marker}@example.com`];
 const userIds = [];
+const houseIds = [];
 const categoryIds = [];
 let database;
 let server;
@@ -21,6 +22,7 @@ try {
   for (const email of emails) {
     const user = await registerUser({ name: 'Teste Objetos', email, password: 'TesteObjetos123!' });
     userIds.push(new ObjectId(user.id));
+    houseIds.push(new ObjectId(user.houseId));
     tokens.push((await loginUser({ email, password: 'TesteObjetos123!' })).token);
   }
   const category = await createCategory({ name: `Objetos-${marker}` });
@@ -60,9 +62,9 @@ try {
   const filterCategory = await createCategory({ name: `Filtro-${marker}` });
   categoryIds.push(new ObjectId(filterCategory.id));
   const extraObjects = [
-    await createObject({ name: 'Câmara (A+B).01', categoryId: category.id }, userIds[0]),
-    await createObject({ name: 'Portátil secundário', categoryId: filterCategory.id }, userIds[0]),
-    await createObject({ name: 'Portátil pessoal', categoryId: category.id }, userIds[1])
+    await createObject({ name: 'Câmara (A+B).01', categoryId: category.id }, userIds[0], houseIds[0]),
+    await createObject({ name: 'Portátil secundário', categoryId: filterCategory.id }, userIds[0], houseIds[0]),
+    await createObject({ name: 'Portátil pessoal', categoryId: category.id }, userIds[1], houseIds[1])
   ];
   response = await request(0, 'GET', '?search=PORT');
   assert.equal(response.status, 200);
@@ -112,7 +114,7 @@ try {
   const raceId = new ObjectId(raceCategory.id);
   categoryIds.push(raceId);
   await Promise.allSettled([
-    createObject({ name: 'Teste concorrente', categoryId: raceCategory.id }, userIds[0]),
+    createObject({ name: 'Teste concorrente', categoryId: raceCategory.id }, userIds[0], houseIds[0]),
     deleteCategory(raceCategory.id)
   ]);
   const referenced = await database.collection('objects').countDocuments({ categoryId: raceId });
@@ -185,6 +187,7 @@ try {
       await database.collection('objects').deleteMany({ userId: { $in: userIds } });
       await database.collection('sessions').deleteMany({ userId: { $in: userIds } });
       await database.collection('users').deleteMany({ _id: { $in: userIds }, email: { $in: emails } });
+      await database.collection('houses').deleteMany({ _id: { $in: houseIds } });
     }
     if (categoryIds.length) await database.collection('categories').deleteMany({ _id: { $in: categoryIds } });
     // Marcadores exatos cobrem uma eventual resposta de criação perdida.

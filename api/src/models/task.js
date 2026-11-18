@@ -70,6 +70,7 @@ export async function setupTasks(database) {
       required: ['objectId', 'userId', 'title', 'dueOn', 'status', 'completedAt', 'createdAt', 'updatedAt'],
       properties: {
         _id: { bsonType: 'objectId' }, objectId: { bsonType: 'objectId' }, userId: { bsonType: 'objectId' },
+        houseId: { bsonType: 'objectId' },
         title: { bsonType: 'string', minLength: 2, maxLength: 120, pattern: '^\\S(?:[\\s\\S]*\\S)$' },
         dueOn: { bsonType: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
         reminderEnabled: { bsonType: 'bool' },

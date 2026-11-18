@@ -1,6 +1,8 @@
 # KeepWell API
 
-Servidor Node.js com Express e código de ligação ao MongoDB Atlas. A ligação real depende das credenciais no .env. Registo, login, sessões, categorias e criação/consulta de objetos implementados; CRUD, pesquisa e filtro de objetos implementados; fotografia e tarefas ainda pendentes.
+API REST do KeepWell em Node.js e Express, com MongoDB Atlas. A API disponibiliza contas, objetos, fotografias, cuidados, histórico, categorias e dicas.
+
+A transição para casas começou pelo modelo de dados e pela criação da casa no registo. Os exemplos das rotas existentes descrevem as permissões atuais. As regras previstas estão na [especificação de casas](../docs/casas.md).
 
 ## Requisitos
 
@@ -812,3 +814,46 @@ GET /tasks, GET /tasks/:id, GET /tasks/reminders e GET /objects/:id/history
 incluem objectName em cada cuidado. O nome é obtido do objeto atual, sem o
 duplicar no documento da tarefa. Se a referência não puder ser resolvida na
 conta autenticada, a listagem e o detalhe devolvem objectName: null.
+
+## Transição para casas
+
+O registo cria uma conta e a sua casa na mesma transação. A resposta do registo,
+do login e de GET /auth/me inclui houseId e houseRole quando a conta tem casa.
+Durante esta etapa, a API ainda usa role nas permissões existentes.
+
+Numa base de desenvolvimento, corre npm.cmd run db:setup antes de testar o
+registo. O comando prepara houses e permite que users guarde os novos campos.
+O teste npm.cmd run test:integration verifica a criação da casa e a ausência
+de uma casa extra quando o email está duplicado.
+
+npm.cmd run migrate:house-memberships conta as contas sem casa.
+Com npm.cmd run migrate:house-memberships -- --apply, cria uma casa para cada
+uma e atribui-lhe houseRole owner. O comando pode ser repetido. Esta etapa
+migra a associação das contas.
+
+npm.cmd run migrate:house-data mostra quantos objetos, cuidados e dicas ainda
+precisam de casa. Para aplicar numa base de teste, para a API, corre db:setup e
+aplica primeiro a migração das contas. Depois corre
+npm.cmd run migrate:house-data -- --apply.
+
+Os objetos recebem houseId e createdBy. Os cuidados recebem houseId, mantendo
+a referência ao objeto. As dicas globais passam para a casa de ana@keepwell.test.
+Nesta fase, os campos antigos continuam em uso pelas rotas. Repete a migração
+depois de parar a API na mudança para as rotas por casa, para apanhar dados
+criados entretanto. Coordena a execução na base partilhada com a equipa.
+
+### Objetos, fotografias e histórico por casa
+
+Para contas com casa, GET /objects, os detalhes, as fotografias e o histórico
+partilham os dados da casa. Um objeto de outra casa devolve 404. Donos e
+gestores podem editar e eliminar objetos e gerir as fotografias. Um membro
+pode criar objetos e enviar a primeira fotografia de um objeto que criou.
+Tentar alterar ou eliminar um objeto da casa sem permissão devolve 403.
+
+As contas antigas sem casa ainda consultam os próprios objetos que aguardam
+migração. Quando uma conta passa a ter casa, os seus objetos existentes
+precisam de houseId para surgirem na listagem. Aplica as duas migrações juntas
+antes de voltar a iniciar a API na base partilhada.
+
+O histórico e o próximo cuidado partem do ID do objeto acessível. As rotas
+próprias de cuidados ainda passam pelas permissões anteriores nesta etapa.

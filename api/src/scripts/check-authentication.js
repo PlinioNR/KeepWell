@@ -139,8 +139,10 @@ try {
     if (user) {
       await database.collection('sessions').deleteMany({ userId: user._id });
       await database.collection('users').deleteOne({ _id: user._id });
+      if (user.houseId) await database.collection('houses').deleteOne({ _id: user.houseId });
     }
-    await database.collection('users').deleteOne({ email: occupiedEmail });
+    const occupied = await database.collection('users').findOneAndDelete({ email: occupiedEmail });
+    if (occupied?.houseId) await database.collection('houses').deleteOne({ _id: occupied.houseId });
     assert.equal(await database.collection('users').countDocuments({ email: { $in: [email, newEmail, occupiedEmail] } }), 0);
     if (userId) assert.equal(await database.collection('sessions').countDocuments({ userId }), 0);
     console.log('Conta e sessões temporárias deste teste eliminadas.');

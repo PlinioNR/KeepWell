@@ -4,8 +4,9 @@ import { ObjectId } from 'mongodb';
 import { getDatabase, withDatabaseTransaction } from '../database.js';
 import { buildObject, parseObjectId, toPublicObject } from '../models/object.js';
 
-export async function createObject(body, userId) {
+export async function createObject(body, userId, houseId) {
   const object = buildObject(body, userId);
+  if (houseId) Object.assign(object, { houseId, createdBy: userId });
   return withDatabaseTransaction(async (database, session) => {
     // Escrita comum à criação e eliminação da categoria: evita referências órfãs.
     // referenceVersion é um contador técnico interno, não uma contagem de objetos.
@@ -39,7 +40,7 @@ export function parseObjectPagination(query = {}) {
 
 // Constrói o filtro a partir de valores simples; não copia operadores enviados pelo cliente.
 export function parseObjectFilters(query = {}, userId) {
-  const filter = { userId };
+  const filter = userId ? { userId } : {};
   if (query.search !== undefined) {
     if (typeof query.search !== 'string') {
       throw Object.assign(new Error('A pesquisa deve ser um texto único.'), { status: 400 });
@@ -70,12 +71,12 @@ export function parseObjectFilters(query = {}, userId) {
   return filter;
 }
 
-async function objectsWithNextCare(objects, userId) {
+async function objectsWithNextCare(objects) {
   if (!objects.length) return [];
-  const filter = buildTaskFilter(userId, { status: 'pending' });
+  const { status, dueOn } = buildTaskFilter(undefined, { status: 'pending' });
   // Uma consulta para todos os objetos da página.
   const next = await getDatabase().collection('tasks').aggregate([
-    { $match: { ...filter, objectId: { $in: objects.map(object => object._id) } } },
+    { $match: { status, dueOn, objectId: { $in: objects.map(object => object._id) } } },
     { $sort: { dueOn: 1, _id: 1 } },
     { $group: { _id: '$objectId', task: { $first: { id: { $toString: '$_id' }, title: '$title', dueOn: '$dueOn' } } } }
   ]).toArray();
@@ -85,31 +86,30 @@ async function objectsWithNextCare(objects, userId) {
   }));
 }
 
-export async function listObjects(userId, query = {}) {
+export async function listObjects(scope, query = {}) {
   const { page, pageSize } = parseObjectPagination(query);
   const collection = getDatabase().collection('objects');
-  // Mesmo um administrador só consulta os seus objetos pessoais nestas rotas.
-  const filter = parseObjectFilters(query, userId);
+  const filter = { ...scope, ...parseObjectFilters(query) };
   const [objects, total] = await Promise.all([
     collection.find(filter).sort({ createdAt: -1, _id: -1 }).skip((page - 1) * pageSize).limit(pageSize).toArray(),
     collection.countDocuments(filter)
   ]);
-  return { objects: await objectsWithNextCare(objects, userId), page, pageSize, total };
+  return { objects: await objectsWithNextCare(objects), page, pageSize, total };
 }
 
-export async function getObject(id, userId) {
-  const object = await getDatabase().collection('objects').findOne({ _id: parseObjectId(id), userId });
+export async function getObject(id, scope) {
+  const object = await getDatabase().collection('objects').findOne({ _id: parseObjectId(id), ...scope });
   // Mesma resposta para inexistente ou de outra pessoa: não revela os seus dados.
   if (!object) throw Object.assign(new Error('Objeto não encontrado.'), { status: 404 });
-  const [result] = await objectsWithNextCare([object], userId);
+  const [result] = await objectsWithNextCare([object]);
   return result;
 }
 
-export async function updateObject(id, body, userId) {
+export async function updateObject(id, body, scope) {
   const _id = parseObjectId(id);
   return withDatabaseTransaction(async (database, session) => {
     const objects = database.collection('objects');
-    const current = await objects.findOne({ _id, userId }, { session });
+    const current = await objects.findOne({ _id, ...scope }, { session });
     if (!current) throw Object.assign(new Error('Objeto não encontrado.'), { status: 404 });
     // PATCH aceita os campos editáveis; um pedido vazio não altera datas.
     if (!body || typeof body !== 'object' || Array.isArray(body) || !Object.keys(body).length ||
@@ -121,7 +121,7 @@ export async function updateObject(id, body, userId) {
       categoryId: Object.hasOwn(body, 'categoryId') ? body.categoryId : current.categoryId.toString(),
       acquiredOn: Object.hasOwn(body, 'acquiredOn') ? body.acquiredOn : current.acquiredOn,
       description: Object.hasOwn(body, 'description') ? body.description : current.description
-    }, userId);
+    }, current.userId);
     if (!validated.categoryId.equals(current.categoryId)) {
       // Usa o mesmo protocolo da criação para coordenar com deleteCategory.
       const category = await database.collection('categories').findOneAndUpdate(
@@ -131,7 +131,7 @@ export async function updateObject(id, body, userId) {
       if (!category) throw Object.assign(new Error('A categoria selecionada não existe.'), { status: 400 });
     }
     const updated = await objects.findOneAndUpdate(
-      { _id, userId },
+      { _id, ...scope },
       { $set: { name: validated.name, description: validated.description, categoryId: validated.categoryId, acquiredOn: validated.acquiredOn, updatedAt: validated.updatedAt } },
       { session, returnDocument: 'after' }
     );
@@ -140,12 +140,12 @@ export async function updateObject(id, body, userId) {
   });
 }
 
-export async function deleteObject(id, userId) {
+export async function deleteObject(id, scope) {
   const _id = parseObjectId(id);
   const photoKey = await withDatabaseTransaction(async (database, session) => {
     // Escrita no objeto para coordenar com futuras criações de tarefas.
     const object = await database.collection('objects').findOneAndUpdate(
-      { _id, userId }, { $inc: { referenceVersion: 1 } },
+      { _id, ...scope }, { $inc: { referenceVersion: 1 } },
       { session, returnDocument: 'after', projection: { _id: 1, photoKey: 1 } }
     );
     if (!object) throw Object.assign(new Error('Objeto não encontrado.'), { status: 404 });
@@ -153,7 +153,7 @@ export async function deleteObject(id, userId) {
     if (task) {
       throw Object.assign(new Error('O objeto tem tarefas associadas e não pode ser eliminado.'), { status: 409 });
     }
-    await database.collection('objects').deleteOne({ _id, userId }, { session });
+    await database.collection('objects').deleteOne({ _id, ...scope }, { session });
     return object.photoKey;
   });
   // Só remove a imagem depois da eliminação do objeto ser confirmada.

@@ -91,3 +91,16 @@ Guardar comandos e caminhos úteis sem incluir palavras-passe, tokens ou chaves.
 - **Diagnóstico.** O Flutter apontava para `10.0.2.2:3000`, mas o computador recusava ligações à porta 3000.
 - **Solução.** Iniciar a API com `npm run dev` na pasta `api`.
 - **Validação.** A API iniciou, ligou ao MongoDB Atlas e o endpoint `/health/database` respondeu com sucesso. O login na app precisa de ser repetido.
+
+### Validação da migração após atualizar o acesso ao Atlas
+
+- **Problema.** A ligação do computador ao Atlas rejeitava os testes das casas.
+- **Solução.** Adicionar o IP público atual do computador à lista de acesso do projeto KeepWell.
+- **Validação.** As consultas à base partilhada identificaram os dados pendentes. Numa base temporária, o registo e as migrações passaram. Uma segunda execução encontrou zero registos pendentes. A base de teste foi eliminada.
+
+### A listagem de objetos devolvia 500 na transição para casas
+
+- **Problema.** O teste de integração da listagem falhou após a mudança para o filtro por casa.
+- **Diagnóstico.** A chamada que acrescenta o próximo cuidado aos objetos ainda usava a variável do filtro antigo.
+- **Solução.** Consultar o próximo cuidado pelos IDs dos objetos já autorizados, mantendo o filtro de data e estado.
+- **Validação.** Passaram as verificações de objetos, fotografias e cuidados numa base temporária do Atlas, incluindo acesso entre membros da mesma casa e bloqueio entre casas.

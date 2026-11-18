@@ -8,6 +8,8 @@
     "start": "node --env-file=.env src/server.js",
     "dev": "node --env-file=.env --watch src/server.js",
     "db:setup": "node --env-file=.env src/scripts/setup-database.js",
+    "migrate:house-memberships": "node --env-file=.env src/scripts/migrate-house-memberships.js",
+    "migrate:house-data": "node --env-file=.env src/scripts/migrate-house-data.js",
     "test": "node --test",
     "test:integration": "node --env-file=.env src/scripts/check-registration.js",
     "test:auth": "node --env-file=.env src/scripts/check-authentication.js",

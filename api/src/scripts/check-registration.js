@@ -3,15 +3,19 @@ import { randomUUID } from 'node:crypto';
 import app from '../app.js';
 import { connectDatabase, closeDatabase } from '../database.js';
 
-// Teste explícito com o Atlas: cria UMA conta temporária e elimina apenas essa conta.
+// Teste explícito com o Atlas: cria uma conta e uma casa temporárias.
 const email = `keepwell-test-${randomUUID()}@example.com`;
 const input = { name: 'Teste de registo', email, password: 'TesteRegisto123!' };
 let server;
 let users;
+let houses;
 let createdId;
 try {
   const database = await connectDatabase();
   users = database.collection('users');
+  houses = database.collection('houses');
+  input.name = 'Teste-' + randomUUID() + ' de registo';
+  const houseName = 'Casa de ' + input.name.split(' ')[0];
   await new Promise((resolve) => { server = app.listen(0, '127.0.0.1', resolve); });
   const base = `http://127.0.0.1:${server.address().port}`;
   const post = (body) => fetch(`${base}/auth/register`, {
@@ -37,12 +41,16 @@ try {
   const saved = await users.findOne({ email });
   createdId = saved?._id;
   assert.equal(saved.name, input.name);
+  assert.equal(body.user.houseRole, 'owner');
+  assert.equal(body.user.houseId, saved.houseId.toString());
+  assert.equal((await houses.findOne({ _id: saved.houseId })).name, houseName);
   assert.match(saved.passwordHash, /^scrypt\$32768\$8\$3\$/);
   assert.ok(!('password' in saved));
 
   response = await post({ ...input, email: email.toUpperCase() });
   assert.equal(response.status, 409);
   assert.equal(await users.countDocuments({ email }), 1);
+  assert.equal(await houses.countDocuments({ name: houseName }), 1);
   response = await fetch(`${base}/health`);
   assert.equal(response.status, 200);
   response = await fetch(`${base}/health/database`);
@@ -56,7 +64,9 @@ try {
   // Procura apenas o email aleatório gerado por este teste se a resposta se perdeu.
   if (users) {
     const ownDocument = createdId ? { _id: createdId, email } : { email };
+    const user = await users.findOne(ownDocument);
     await users.deleteOne(ownDocument);
+    if (user?.houseId) await houses.deleteOne({ _id: user.houseId });
     assert.equal(await users.countDocuments({ email }), 0);
     console.log('Conta temporária deste teste eliminada.');
   }
