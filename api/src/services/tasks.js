@@ -156,14 +156,14 @@ export async function completeTask(id, body, userId) {
     return toPublicTask(completed);
   });
 }
-export async function listObjectHistory(id, userId, query) {
+export async function listObjectHistory(id, scope, query) {
   const { page, pageSize } = parseTaskPagination(query);
   const objectId = parseObjectId(id);
   const database = getDatabase();
-  const object = await database.collection('objects').findOne({ _id: objectId, userId }, { projection: { name: 1, createdAt: 1 } });
+  const object = await database.collection('objects').findOne({ _id: objectId, ...scope }, { projection: { name: 1, createdAt: 1 } });
   if (!object) throw Object.assign(new Error('Objeto não encontrado.'), { status: 404 });
   const collection = database.collection('tasks');
-  const filter = { userId, objectId, status: 'completed' };
+  const filter = { objectId, status: 'completed' };
   const [tasks, total] = await Promise.all([
     collection.find(filter).sort({ completedAt: -1, _id: -1 }).skip((page - 1) * pageSize).limit(pageSize).toArray(),
     collection.countDocuments(filter)

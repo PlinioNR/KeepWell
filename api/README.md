@@ -841,3 +841,19 @@ a referência ao objeto. As dicas globais passam para a casa de ana@keepwell.tes
 Nesta fase, os campos antigos continuam em uso pelas rotas. Repete a migração
 depois de parar a API na mudança para as rotas por casa, para apanhar dados
 criados entretanto. Coordena a execução na base partilhada com a equipa.
+
+### Objetos, fotografias e histórico por casa
+
+Para contas com casa, GET /objects, os detalhes, as fotografias e o histórico
+partilham os dados da casa. Um objeto de outra casa devolve 404. Donos e
+gestores podem editar e eliminar objetos e gerir as fotografias. Um membro
+pode criar objetos e enviar a primeira fotografia de um objeto que criou.
+Tentar alterar ou eliminar um objeto da casa sem permissão devolve 403.
+
+As contas antigas sem casa ainda consultam os próprios objetos que aguardam
+migração. Quando uma conta passa a ter casa, os seus objetos existentes
+precisam de houseId para surgirem na listagem. Aplica as duas migrações juntas
+antes de voltar a iniciar a API na base partilhada.
+
+O histórico e o próximo cuidado partem do ID do objeto acessível. As rotas
+próprias de cuidados ainda passam pelas permissões anteriores nesta etapa.

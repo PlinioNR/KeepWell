@@ -64,7 +64,7 @@ try {
   assert.equal(categories.length, 1);
   assert.ok(!('objectCount' in categories[0]));
   await database.collection('users').updateOne({ _id: userId, email }, { $set: { role: 'admin' } });
-  await deleteObject(testObject.id, userId);
+  await deleteObject(testObject.id, { userId });
   response = await request('GET', `?search=${encodeURIComponent(name)}`);
   assert.equal((await response.json()).categories[0].objectCount, 0);
   for (const query of ['?search=a&search=b', '?search=' + 'x'.repeat(61), '?objectCount=true']) {
@@ -127,6 +127,7 @@ try {
     if (user) {
       await database.collection('sessions').deleteMany({ userId: user._id });
       await database.collection('users').deleteOne({ _id: user._id, email });
+      if (user.houseId) await database.collection('houses').deleteOne({ _id: user.houseId });
     }
     assert.equal(await database.collection('users').countDocuments({ email }), 0);
     console.log('Dados e sessão temporários removidos.');

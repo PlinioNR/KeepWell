@@ -2,15 +2,27 @@ import { getDatabase } from '../database.js';
 import { parseObjectId, toPublicObject } from '../models/object.js';
 import { normalizePhoto, writePhotoFile, readPhotoFile, removePhotoFile } from '../storage/photo-files.js';
 
-export async function requirePhotoOwner(req, res, next) {
+export async function requirePhotoUploadAccess(req, res, next) {
+  const user = req.auth.user;
+  const scope = req.objectScope;
   const object = await getDatabase().collection('objects').findOne(
-    { _id: parseObjectId(req.params.id), userId: req.auth.user._id }, { projection: { _id: 1 } }
+    { _id: parseObjectId(req.params.id), ...scope }, { projection: { createdBy: 1, photoKey: 1 } }
   );
   if (!object) return res.status(404).json({ error: 'Objeto não encontrado.' });
+
+  // Um membro pode enviar a primeira fotografia do objeto que criou.
+  if (user.houseRole === 'member') {
+    if (!object.createdBy?.equals(user._id) || object.photoKey) {
+      return res.status(403).json({ error: 'Não tens permissão para esta ação.' });
+    }
+    req.photoUploadScope = { ...scope, createdBy: user._id, photoKey: null };
+  } else {
+    req.photoUploadScope = scope;
+  }
   next();
 }
 
-export async function saveObjectPhoto(id, userId, buffer) {
+export async function saveObjectPhoto(id, scope, buffer) {
   const _id = parseObjectId(id);
   const normalized = await normalizePhoto(buffer);
   const key = await writePhotoFile(normalized);
@@ -20,7 +32,7 @@ export async function saveObjectPhoto(id, userId, buffer) {
   try {
     // Atualização atómica: a resposta anterior identifica apenas o ficheiro substituído.
     previous = await objects.findOneAndUpdate(
-      { _id, userId }, { $set: { photoKey: key, updatedAt } }, { returnDocument: 'before' }
+      { _id, ...scope }, { $set: { photoKey: key, updatedAt } }, { returnDocument: 'before' }
     );
   } catch (error) {
     // Se houve falha na resposta da BD, confirma antes de apagar o novo ficheiro.
@@ -38,16 +50,16 @@ export async function saveObjectPhoto(id, userId, buffer) {
   return toPublicObject({ ...previous, photoKey: key, updatedAt });
 }
 
-export async function getObjectPhoto(id, userId) {
-  const object = await getDatabase().collection('objects').findOne({ _id: parseObjectId(id), userId });
+export async function getObjectPhoto(id, scope) {
+  const object = await getDatabase().collection('objects').findOne({ _id: parseObjectId(id), ...scope });
   if (!object) throw Object.assign(new Error('Objeto não encontrado.'), { status: 404 });
   if (!object.photoKey) throw Object.assign(new Error('Fotografia não encontrada.'), { status: 404 });
   return readPhotoFile(object.photoKey);
 }
 
-export async function deleteObjectPhoto(id, userId) {
+export async function deleteObjectPhoto(id, scope) {
   const object = await getDatabase().collection('objects').findOneAndUpdate(
-    { _id: parseObjectId(id), userId }, { $set: { photoKey: null, updatedAt: new Date() } }, { returnDocument: 'before' }
+    { _id: parseObjectId(id), ...scope }, { $set: { photoKey: null, updatedAt: new Date() } }, { returnDocument: 'before' }
   );
   if (!object) throw Object.assign(new Error('Objeto não encontrado.'), { status: 404 });
   await removePhotoFile(object.photoKey);

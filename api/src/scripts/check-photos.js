@@ -12,8 +12,9 @@ import { createObject } from '../services/objects.js';
 import { readPhotoFile, removePhotoFile, maxPhotoBytes } from '../storage/photo-files.js';
 
 const marker = randomUUID();
-const emails = [`photo-a-${marker}@example.com`, `photo-b-${marker}@example.com`];
+const emails = [`photo-a-${marker}@example.com`, `photo-b-${marker}@example.com`, `photo-c-${marker}@example.com`];
 const userIds = [];
+const houseIds = [];
 const keys = new Set();
 let database;
 let categoryId;
@@ -24,11 +25,15 @@ try {
   for (const email of emails) {
     const user = await registerUser({ name: 'Teste Fotografia', email, password: 'TesteFoto123!' });
     userIds.push(new ObjectId(user.id));
+    houseIds.push(new ObjectId(user.houseId));
     tokens.push((await loginUser({ email, password: 'TesteFoto123!' })).token);
   }
+  await database.collection('users').updateOne({ _id: userIds[2] }, {
+    $set: { houseId: houseIds[0], houseRole: 'member' }
+  });
   const category = await createCategory({ name: `Fotos-${marker}` });
   categoryId = new ObjectId(category.id);
-  const object = await createObject({ name: 'Objeto com foto', categoryId: category.id }, userIds[0]);
+  const object = await createObject({ name: 'Objeto com foto', categoryId: category.id }, userIds[0], houseIds[0]);
   const _id = new ObjectId(object.id);
   await new Promise(resolve => { server = app.listen(0, '127.0.0.1', resolve); });
   const base = `http://127.0.0.1:${server.address().port}/objects/${object.id}`;
@@ -89,6 +94,31 @@ try {
   const finalKey = (await database.collection('objects').findOne({ _id })).photoKey;
   assert.ok((await readPhotoFile(finalKey)).length > 0);
   for (const key of keys) if (key !== finalKey) await assert.rejects(readPhotoFile(key), { status: 404 });
+  // O membro consulta a foto da casa, mas só envia a primeira foto de um objeto seu.
+  assert.equal((await fetch(base + '/photo', { headers: headers(2) })).status, 200);
+  assert.equal((await fetch(base + '/history', { headers: headers(2) })).status, 200);
+  assert.equal((await fetch(base + '/history', { headers: headers(1) })).status, 404);
+  assert.equal((await upload(form(), 2)).status, 403);
+  assert.equal((await fetch(base + '/photo', { method: 'DELETE', headers: headers(2) })).status, 403);
+  assert.equal((await fetch(base, { method: 'DELETE', headers: headers(2) })).status, 403);
+  const objectsUrl = base.slice(0, base.lastIndexOf('/'));
+  const created = await fetch(objectsUrl, {
+    method: 'POST', headers: { ...headers(2), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'Objeto do membro', categoryId: category.id })
+  });
+  assert.equal(created.status, 201);
+  const { object: memberObject } = await created.json();
+  const memberUrl = objectsUrl + '/' + memberObject.id;
+  assert.equal((await fetch(memberUrl, { headers: headers(0) })).status, 200);
+  assert.equal((await fetch(memberUrl, { headers: headers(1) })).status, 404);
+  const sendMemberPhoto = () => fetch(memberUrl + '/photo', { method: 'PUT', headers: headers(2), body: form() });
+  assert.equal((await sendMemberPhoto()).status, 200);
+  assert.equal((await sendMemberPhoto()).status, 403);
+  assert.equal((await fetch(memberUrl, {
+    method: 'PATCH', headers: { ...headers(2), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'Mudança do membro' })
+  })).status, 403);
+
   const task = await database.collection('tasks').insertOne(buildTask({ objectId: object.id, title: 'Cuidado temporário', dueOn: '2026-11-08' }, userIds[0]));
   try {
     assert.equal((await fetch(base, { method: 'DELETE', headers: headers(0) })).status, 409);
@@ -108,6 +138,7 @@ try {
     await database.collection('objects').deleteMany({ userId: { $in: userIds } });
     await database.collection('sessions').deleteMany({ userId: { $in: userIds } });
     await database.collection('users').deleteMany({ _id: { $in: userIds }, email: { $in: emails } });
+    await database.collection('houses').deleteMany({ _id: { $in: houseIds } });
     if (categoryId) await database.collection('categories').deleteOne({ _id: categoryId });
     await database.collection('categories').deleteOne({ name: `Fotos-${marker}` });
   }
