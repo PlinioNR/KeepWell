@@ -4,6 +4,7 @@ import { createCategory } from '../services/categories.js';
 import { createObject } from '../services/objects.js';
 import { completeTask, createTask, lisbonDate } from '../services/tasks.js';
 import { createTip } from '../services/tips.js';
+import { joinHouse, createInvite, updateMember } from '../services/houses.js';
 import { ObjectId } from 'mongodb';
 
 // Dados de demonstração. Reutiliza os objetos e registos que já existem.
@@ -12,9 +13,9 @@ import { ObjectId } from 'mongodb';
 const password = 'demo1234';
 
 const users = [
-  { name: 'Ana Demo', email: 'ana@keepwell.test', role: 'user' },
-  { name: 'Bruno Demo', email: 'bruno@keepwell.test', role: 'user' },
-  { name: 'Admin Demo', email: 'admin@keepwell.test', role: 'admin' }
+  { name: 'Ana Demo', email: 'ana@keepwell.test', houseRole: 'owner' },
+  { name: 'Bruno Demo', email: 'bruno@keepwell.test', houseRole: 'member' },
+  { name: 'Gestor Demo', email: 'gestor@keepwell.test', houseRole: 'manager' }
 ];
 
 const categories = [
@@ -44,16 +45,28 @@ const objects = {
 try {
   const database = await connectDatabase();
 
-  // 1. Contas: cria se não existirem e acerta o perfil (user/admin).
+  // As contas de demonstração partilham a casa da Ana.
   const userIds = {};
-  for (const { name, email, role } of users) {
+  const actors = {};
+  for (const { name, email } of users) {
     let user = await database.collection('users').findOne({ email });
     if (!user) {
       await registerUser({ name, email, password });
       user = await database.collection('users').findOne({ email });
     }
-    await database.collection('users').updateOne({ _id: user._id }, { $set: { role } });
+    if (!user.houseId) throw new Error('Migra as contas existentes antes de executar o seed.');
+    actors[email] = user;
     userIds[email] = user._id;
+  }
+  const ana = actors['ana@keepwell.test'];
+  for (const { email, houseRole } of users.slice(1)) {
+    let actor = actors[email];
+    if (!actor.houseId.equals(ana.houseId)) {
+      const { code } = await createInvite(ana);
+      await joinHouse(actor, { code });
+    }
+    await updateMember(ana, actor._id.toString(), { role: houseRole });
+    actors[email] = await database.collection('users').findOne({ _id: actor._id });
   }
   console.log(`Contas prontas: ${users.length}`);
 
@@ -73,10 +86,10 @@ try {
     for (const [name, category, acquiredOn] of list) {
       const categoryId = categoryIds[category];
       const existing = await database.collection('objects').findOne({
-        userId: userIds[email], name, categoryId: new ObjectId(categoryId)
+        houseId: ana.houseId, name, categoryId: new ObjectId(categoryId)
       });
       const id = existing?._id.toString() ??
-        (await createObject({ name, categoryId, acquiredOn }, userIds[email])).id;
+        (await createObject({ name, categoryId, acquiredOn }, userIds[email], ana.houseId, actors[email])).id;
       objectIds.set(email + ':' + name, id);
     }
   }
@@ -99,11 +112,11 @@ try {
     const userId = userIds[email];
     const objectId = objectIds.get(email + ':' + name);
     const existing = await database.collection('tasks').findOne({
-      userId, objectId: new ObjectId(objectId), title
+      houseId: ana.houseId, objectId: new ObjectId(objectId), title
     });
     const id = existing?._id.toString() ??
-      (await createTask({ objectId, title, dueOn: dayOffset(days), ...options }, userId)).id;
-    if (notes && existing?.status !== 'completed') await completeTask(id, { notes }, userId);
+      (await createTask({ objectId, title, dueOn: dayOffset(days), ...options }, ana)).id;
+    if (notes && existing?.status !== 'completed') await completeTask(id, { notes }, ana);
   }
 
   const tips = [
@@ -114,12 +127,12 @@ try {
   ];
   for (const [category, title, text] of tips) {
     const categoryId = categoryIds[category];
-    const existing = await database.collection('tips').findOne({ categoryId: new ObjectId(categoryId), title });
-    if (!existing) await createTip({ categoryId, title, text });
+    const existing = await database.collection('tips').findOne({ houseId: ana.houseId, categoryId: new ObjectId(categoryId), title });
+    if (!existing) await createTip({ categoryId, title, text }, ana);
   }
 
   console.log('Objetos, cuidados e dicas de demonstração prontos.');
-  console.log(`Entrar com ana@keepwell.test, bruno@keepwell.test ou admin@keepwell.test (palavra-passe: ${password}).`);
+  console.log(`Entrar com ana@keepwell.test, bruno@keepwell.test ou gestor@keepwell.test (palavra-passe: ${password}).`);
 } catch (error) {
   console.error('Não foi possível criar os dados de demonstração:', error.message);
   process.exitCode = 1;

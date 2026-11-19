@@ -9,7 +9,7 @@ test('normaliza nome/email e impede que o cliente escolha admin ou campos extra'
   const user = buildUser({ ...valid, role: 'admin', password: 'nao-guardar', extra: true });
   assert.equal(user.name, 'Rafael');
   assert.equal(user.email, 'rafael@example.com');
-  assert.equal(user.role, 'user');
+  assert.ok(!('role' in user));
   assert.ok(user.createdAt instanceof Date);
   assert.ok(user.updatedAt instanceof Date);
   assert.ok(!('password' in user));

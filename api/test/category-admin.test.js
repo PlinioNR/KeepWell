@@ -1,19 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { requireAdmin } from '../src/middleware/require-admin.js';
+import { requireHouseRole } from '../src/middleware/require-house.js';
 import { parseCategoryId, validateCategoryInput } from '../src/services/categories.js';
 
-test('bloqueia utilizadores comuns e pedidos sem autenticação no controlo de admin', () => {
-  for (const req of [{}, { auth: { user: { role: 'user' } } }, { body: { role: 'admin' } }]) {
+test('bloqueia membros e permite dono ou gestor', () => {
+  for (const req of [{}, { auth: { user: { houseRole: 'member' } } }, { body: { role: 'admin' } }]) {
     let status;
     let called = false;
     const res = { status(code) { status = code; return this; }, json() {} };
-    requireAdmin(req, res, () => { called = true; });
+    requireHouseRole('owner', 'manager')(req, res, () => { called = true; });
     assert.equal(status, 403);
     assert.equal(called, false);
   }
   let called = false;
-  requireAdmin({ auth: { user: { role: 'admin' } } }, {}, () => { called = true; });
+  requireHouseRole('owner', 'manager')({ auth: { user: { houseRole: 'owner' } } }, {}, () => { called = true; });
   assert.equal(called, true);
 });
 

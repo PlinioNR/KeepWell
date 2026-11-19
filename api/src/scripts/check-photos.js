@@ -132,10 +132,10 @@ try {
   console.log('Fotografias verificadas: conteúdo, tamanho, autenticação, dono, substituição, consulta, remoção e limpeza do objeto.');
 } finally {
   if (database && userIds.length) {
-    const objects = await database.collection('objects').find({ userId: { $in: userIds } }).toArray();
+    const objects = await database.collection('objects').find({ houseId: { $in: houseIds } }).toArray();
     for (const object of objects) if (object.photoKey) keys.add(object.photoKey);
     await database.collection('tasks').deleteMany({ userId: { $in: userIds } });
-    await database.collection('objects').deleteMany({ userId: { $in: userIds } });
+    await database.collection('objects').deleteMany({ houseId: { $in: houseIds } });
     await database.collection('sessions').deleteMany({ userId: { $in: userIds } });
     await database.collection('users').deleteMany({ _id: { $in: userIds }, email: { $in: emails } });
     await database.collection('houses').deleteMany({ _id: { $in: houseIds } });

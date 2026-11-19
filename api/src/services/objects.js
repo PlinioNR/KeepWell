@@ -1,13 +1,15 @@
+import { lockHouseActor } from './house-access.js';
 import { buildTaskFilter } from './tasks.js';
 import { removePhotoFile } from '../storage/photo-files.js';
 import { ObjectId } from 'mongodb';
 import { getDatabase, withDatabaseTransaction } from '../database.js';
 import { buildObject, parseObjectId, toPublicObject } from '../models/object.js';
 
-export async function createObject(body, userId, houseId) {
+export async function createObject(body, userId, houseId, actor) {
   const object = buildObject(body, userId);
-  if (houseId) Object.assign(object, { houseId, createdBy: userId });
+  if (houseId) { Object.assign(object, { houseId, createdBy: userId }); delete object.userId; }
   return withDatabaseTransaction(async (database, session) => {
+    if (actor) await lockHouseActor(database, session, actor);
     // Escrita comum à criação e eliminação da categoria: evita referências órfãs.
     // referenceVersion é um contador técnico interno, não uma contagem de objetos.
     const category = await database.collection('categories').findOneAndUpdate(
@@ -71,12 +73,12 @@ export function parseObjectFilters(query = {}, userId) {
   return filter;
 }
 
-async function objectsWithNextCare(objects) {
+async function objectsWithNextCare(objects, scope) {
   if (!objects.length) return [];
   const { status, dueOn } = buildTaskFilter(undefined, { status: 'pending' });
   // Uma consulta para todos os objetos da página.
   const next = await getDatabase().collection('tasks').aggregate([
-    { $match: { status, dueOn, objectId: { $in: objects.map(object => object._id) } } },
+    { $match: { ...scope, status, dueOn, objectId: { $in: objects.map(object => object._id) } } },
     { $sort: { dueOn: 1, _id: 1 } },
     { $group: { _id: '$objectId', task: { $first: { id: { $toString: '$_id' }, title: '$title', dueOn: '$dueOn' } } } }
   ]).toArray();
@@ -94,20 +96,21 @@ export async function listObjects(scope, query = {}) {
     collection.find(filter).sort({ createdAt: -1, _id: -1 }).skip((page - 1) * pageSize).limit(pageSize).toArray(),
     collection.countDocuments(filter)
   ]);
-  return { objects: await objectsWithNextCare(objects), page, pageSize, total };
+  return { objects: await objectsWithNextCare(objects, scope), page, pageSize, total };
 }
 
 export async function getObject(id, scope) {
   const object = await getDatabase().collection('objects').findOne({ _id: parseObjectId(id), ...scope });
-  // Mesma resposta para inexistente ou de outra pessoa: não revela os seus dados.
+  // A consulta já limita os resultados à casa autenticada.
   if (!object) throw Object.assign(new Error('Objeto não encontrado.'), { status: 404 });
-  const [result] = await objectsWithNextCare([object]);
+  const [result] = await objectsWithNextCare([object], scope);
   return result;
 }
 
-export async function updateObject(id, body, scope) {
+export async function updateObject(id, body, scope, actor) {
   const _id = parseObjectId(id);
   return withDatabaseTransaction(async (database, session) => {
+    if (actor) await lockHouseActor(database, session, actor, ['owner', 'manager']);
     const objects = database.collection('objects');
     const current = await objects.findOne({ _id, ...scope }, { session });
     if (!current) throw Object.assign(new Error('Objeto não encontrado.'), { status: 404 });
@@ -121,7 +124,7 @@ export async function updateObject(id, body, scope) {
       categoryId: Object.hasOwn(body, 'categoryId') ? body.categoryId : current.categoryId.toString(),
       acquiredOn: Object.hasOwn(body, 'acquiredOn') ? body.acquiredOn : current.acquiredOn,
       description: Object.hasOwn(body, 'description') ? body.description : current.description
-    }, current.userId);
+    }, current.createdBy ?? current.userId);
     if (!validated.categoryId.equals(current.categoryId)) {
       // Usa o mesmo protocolo da criação para coordenar com deleteCategory.
       const category = await database.collection('categories').findOneAndUpdate(
@@ -140,9 +143,10 @@ export async function updateObject(id, body, scope) {
   });
 }
 
-export async function deleteObject(id, scope) {
+export async function deleteObject(id, scope, actor) {
   const _id = parseObjectId(id);
   const photoKey = await withDatabaseTransaction(async (database, session) => {
+    if (actor) await lockHouseActor(database, session, actor, ['owner', 'manager']);
     // Escrita no objeto para coordenar com futuras criações de tarefas.
     const object = await database.collection('objects').findOneAndUpdate(
       { _id, ...scope }, { $inc: { referenceVersion: 1 } },

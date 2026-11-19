@@ -13,6 +13,7 @@ import { buildTask } from '../models/task.js';
 const marker = randomUUID();
 const emails = [`task-a-${marker}@example.com`, `task-b-${marker}@example.com`];
 const userIds = [];
+const actors = [];
 const houseIds = [];
 let database;
 let categoryId;
@@ -24,6 +25,7 @@ try {
     const user = await registerUser({ name: 'Teste Cuidados', email, password: 'TesteCuidados123!' });
     userIds.push(new ObjectId(user.id));
     houseIds.push(new ObjectId(user.houseId));
+    actors.push({ _id: new ObjectId(user.id), houseId: new ObjectId(user.houseId), houseRole: user.houseRole });
     tokens.push((await loginUser({ email, password: 'TesteCuidados123!' })).token);
   }
   const category = await createCategory({ name: `Cuidados-${marker}` });
@@ -51,14 +53,14 @@ try {
   assert.equal(created.task.completedAt, null);
   assert.ok(!('userId' in created.task));
   const saved = await database.collection('tasks').findOne({ _id: new ObjectId(created.task.id) });
-  assert.ok(saved.userId.equals(userIds[0]));
+  assert.ok(saved.houseId.equals(houseIds[0]));
   assert.ok(saved.objectId.equals(new ObjectId(object.id)));
   assert.equal((await request(0, 'GET', `/${created.task.id}`)).status, 200);
   assert.equal((await request(1, 'GET', `/${created.task.id}`)).status, 404);
   assert.equal((await request(0, 'GET', '/invalido')).status, 400);
   response = await request(1, 'GET');
   assert.equal((await response.json()).total, 0);
-  const second = await createTask({ ...valid, title: 'Cuidado anterior', dueOn: '2026-11-01' }, userIds[0]);
+  const second = await createTask({ ...valid, title: 'Cuidado anterior', dueOn: '2026-11-01' }, actors[0]);
   response = await request(0, 'GET', '?pageSize=1');
   let list = await response.json();
   assert.equal(list.total, 2);
@@ -128,8 +130,8 @@ try {
   assert.deepEqual(emptyHistoryBody.events, [{ type: 'object_added', occurredAt: otherObject.createdAt.toISOString() }]);
   assert.equal((await fetch(historyUrl + '?pageSize=101', auth(0))).status, 400);
   await assert.rejects(deleteObject(object.id, { houseId: houseIds[0] }), { status: 409 });
-  const editable = await createTask({ ...valid, dueOn: '2099-01-01' }, userIds[0]);
-  const overdue = await createTask({ ...valid, dueOn: '2000-01-01' }, userIds[0]);
+  const editable = await createTask({ ...valid, dueOn: '2099-01-01' }, actors[0]);
+  const overdue = await createTask({ ...valid, dueOn: '2000-01-01' }, actors[0]);
   assert.equal((await request(1, 'PATCH', `/${editable.id}`, { title: 'Outro título' })).status, 404);
   assert.equal((await request(1, 'DELETE', `/${editable.id}`)).status, 404);
   assert.equal((await request(0, 'PATCH', `/${editable.id}`, { dueOn: '2026-02-30' })).status, 400);
@@ -172,7 +174,7 @@ try {
   const afterDelete = await fetch(`${objectsUrl}/${object.id}`, auth(0));
   assert.equal((await afterDelete.json()).object.nextCare, null);
   assert.equal((await request(0, 'GET', `/${editable.id}`)).status, 404);
-  const recurring = await createTask({ ...valid, title: 'Limpar mensalmente', description: '  Limpar com pano seco.  ', repeatEveryDays: 30, reminderEnabled: true }, userIds[0]);
+  const recurring = await createTask({ ...valid, title: 'Limpar mensalmente', description: '  Limpar com pano seco.  ', repeatEveryDays: 30, reminderEnabled: true }, actors[0]);
   assert.equal((await request(0, 'POST', '', { ...valid, repeatEveryDays: 0 })).status, 400);
   const recurringResponses = await Promise.all([0, 1].map(() =>
     request(0, 'POST', '/' + recurring.id + '/complete', { notes: 'Feito' })
@@ -197,7 +199,7 @@ try {
   assert.equal((await remindersOff.json()).total, 0);
   await database.collection('users').updateOne({ _id: userIds[0] }, { $set: { 'preferences.remindersEnabled': true } });
   await database.collection('tasks').updateOne({ _id: new ObjectId(overdue.id) }, { $set: { reminderEnabled: true } });
-  await createTask({ ...valid, objectId: otherObject.id, dueOn: '2099-01-01', reminderEnabled: true }, userIds[1]);
+  await createTask({ ...valid, objectId: otherObject.id, dueOn: '2099-01-01', reminderEnabled: true }, actors[1]);
   const remindersOn = await request(0, 'GET', '/reminders?pageSize=1');
   assert.equal(remindersOn.status, 200);
   const reminderPage = await remindersOn.json();
@@ -206,7 +208,7 @@ try {
   assert.equal(details.status, 200);
   assert.equal((await details.json()).task.objectName, object.name);
   await database.collection('objects').updateOne(
-    { _id: new ObjectId(object.id), userId: userIds[0] },
+    { _id: new ObjectId(object.id), houseId: houseIds[0] },
     { $set: { name: 'Nome atualizado no teste' } }
   );
   const renamedList = await request(0, 'GET', '?objectId=' + object.id);
@@ -214,7 +216,7 @@ try {
   assert.ok(renamedTasks.length > 0);
   assert.ok(renamedTasks.every(task => task.objectName === 'Nome atualizado no teste'));
   await database.collection('objects').updateOne(
-    { _id: new ObjectId(object.id), userId: userIds[0] },
+    { _id: new ObjectId(object.id), houseId: houseIds[0] },
     { $set: { name: object.name } }
   );
   assert.equal(reminderPage.total, 1);
@@ -235,7 +237,7 @@ try {
   assert.equal(await database.collection('tasks').countDocuments({
     objectId: new ObjectId(object.id), title: recurring.title, status: 'pending'
   }), 0);
-  const todayTask = await createTask({ ...valid, title: 'Cuidado para hoje', dueOn: lisbonDate(new Date()) }, userIds[0]);
+  const todayTask = await createTask({ ...valid, title: 'Cuidado para hoje', dueOn: lisbonDate(new Date()) }, actors[0]);
   const notificationsUrl = 'http://127.0.0.1:' + server.address().port + '/notifications';
   assert.equal((await fetch(notificationsUrl)).status, 401);
   const notificationResponse = await fetch(notificationsUrl, auth(0));
@@ -252,7 +254,7 @@ try {
   assert.ok(Object.values(otherFeed).flat().every(item => item.objectId !== object.id));
   const raceObject = await createObject({ name: 'Objeto concorrente', categoryId: category.id }, userIds[0], houseIds[0]);
   const results = await Promise.allSettled([
-    createTask({ ...valid, objectId: raceObject.id }, userIds[0]),
+    createTask({ ...valid, objectId: raceObject.id }, actors[0]),
     deleteObject(raceObject.id, { houseId: houseIds[0] })
   ]);
   assert.ok(results.some(result => result.status === 'fulfilled'));
@@ -263,8 +265,8 @@ try {
   console.log('Cuidados verificados: criação, calendário, estado, conclusão idempotente, histórico, paginação, dono, validação MongoDB e concorrência.');
 } finally {
   if (database && userIds.length) {
-    await database.collection('tasks').deleteMany({ userId: { $in: userIds } });
-    await database.collection('objects').deleteMany({ userId: { $in: userIds } });
+    await database.collection('tasks').deleteMany({ $or: [{ houseId: { $in: houseIds } }, { userId: { $in: userIds } }] });
+    await database.collection('objects').deleteMany({ houseId: { $in: houseIds } });
     await database.collection('sessions').deleteMany({ userId: { $in: userIds } });
     await database.collection('users').deleteMany({ _id: { $in: userIds }, email: { $in: emails } });
     await database.collection('houses').deleteMany({ _id: { $in: houseIds } });

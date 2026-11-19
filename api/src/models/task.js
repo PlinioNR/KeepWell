@@ -67,7 +67,8 @@ export async function setupTasks(database) {
   const validator = {
     $jsonSchema: {
       bsonType: 'object', additionalProperties: false,
-      required: ['objectId', 'userId', 'title', 'dueOn', 'status', 'completedAt', 'createdAt', 'updatedAt'],
+      anyOf: [{ required: ['userId'] }, { required: ['houseId'] }],
+      required: ['objectId', 'title', 'dueOn', 'status', 'completedAt', 'createdAt', 'updatedAt'],
       properties: {
         _id: { bsonType: 'objectId' }, objectId: { bsonType: 'objectId' }, userId: { bsonType: 'objectId' },
         houseId: { bsonType: 'objectId' },
@@ -93,6 +94,7 @@ export async function setupTasks(database) {
   } else {
     await database.createCollection('tasks', { validator, validationLevel: 'strict', validationAction: 'error' });
   }
+  await database.collection('tasks').createIndex({ houseId: 1, dueOn: 1, _id: 1 }, { name: 'tasks_house_date' });
   await database.collection('tasks').createIndex({ userId: 1, dueOn: 1, _id: 1 }, { name: 'tasks_owner_date' });
   await database.collection('tasks').createIndex({ objectId: 1 }, { name: 'tasks_object' });
   await database.collection('tasks').createIndex({ userId: 1, objectId: 1, status: 1, completedAt: -1, _id: -1 }, { name: 'tasks_object_history' });

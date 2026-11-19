@@ -1,8 +1,7 @@
 import { spawnSync } from 'node:child_process';
 
 const suites = [
-  'test', 'test:integration', 'test:auth', 'test:categories',
-  'test:objects', 'test:photos', 'test:tasks'
+  'test', 'test:houses', 'test:migration'
 ];
 const npm = process.env.npm_execpath;
 if (!npm) {

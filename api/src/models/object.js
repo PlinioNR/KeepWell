@@ -57,7 +57,8 @@ export async function setupObjects(database) {
   const validator = {
     $jsonSchema: {
       bsonType: 'object', additionalProperties: false,
-      required: ['name', 'userId', 'categoryId', 'createdAt', 'updatedAt'],
+      anyOf: [{ required: ['userId'] }, { required: ['houseId', 'createdBy'] }],
+      required: ['name', 'categoryId', 'createdAt', 'updatedAt'],
       properties: {
         _id: { bsonType: 'objectId' },
         referenceVersion: { bsonType: ['int', 'long'], minimum: 0 },
@@ -77,6 +78,7 @@ export async function setupObjects(database) {
   } else {
     await database.createCollection('objects', { validator, validationLevel: 'strict', validationAction: 'error' });
   }
+  await database.collection('objects').createIndex({ houseId: 1, createdAt: -1, _id: -1 }, { name: 'objects_house_date' });
   await database.collection('objects').createIndex({ userId: 1, createdAt: -1, _id: -1 }, { name: 'objects_owner_date' });
   await database.collection('objects').createIndex({ categoryId: 1 }, { name: 'objects_category' });
 }

@@ -13,14 +13,14 @@
     "test": "node --test",
     "test:integration": "node --env-file=.env src/scripts/check-registration.js",
     "test:auth": "node --env-file=.env src/scripts/check-authentication.js",
-    "admin:promote": "node --env-file=.env src/scripts/promote-admin.js",
-    "test:categories": "node --env-file=.env src/scripts/check-category-admin.js",
     "test:objects": "node --env-file=.env src/scripts/check-objects.js",
     "seed:demo": "node --env-file=.env src/scripts/seed-demo.js",
     "test:photos": "node --env-file=.env src/scripts/check-photos.js",
     "test:tasks": "node --env-file=.env src/scripts/check-tasks.js",
     "test:backend": "node src/scripts/check-backend.js",
-    "check:photos": "node --env-file=.env src/scripts/check-photo-storage.js"
+    "check:photos": "node --env-file=.env src/scripts/check-photo-storage.js",
+    "test:houses": "node --env-file=.env src/scripts/check-houses.js",
+    "test:migration": "node --env-file=.env src/scripts/check-house-migration.js"
   },
   "engines": {
     "node": ">=24"

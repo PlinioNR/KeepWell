@@ -44,14 +44,30 @@ try {
       }
     }
 
+    // Confirma as referências antes de alterar dados antigos.
+    for await (const user of users.find({}, { projection: { houseId: 1 } })) {
+      if (!await database.collection('houses').findOne({ _id: user.houseId })) {
+        throw new Error('Uma conta aponta para uma casa inexistente.');
+      }
+    }
+    for await (const task of tasks.find(withoutHouse)) {
+      const owner = await users.findOne({ _id: task.userId });
+      const object = await objects.findOne({ _id: task.objectId });
+      const sameOwner = object?.userId?.equals(task.userId);
+      const sameHouse = object?.houseId?.equals(owner.houseId);
+      if (!object || (!sameOwner && !sameHouse)) {
+        throw new Error('Há um cuidado sem objeto da mesma casa. Corrige a referência antes de migrar.');
+      }
+    }
+
     for await (const user of users.find({}, { projection: { houseId: 1 } })) {
       await withDatabaseTransaction(async (db, session) => {
         const filter = { ...withoutHouse, userId: user._id };
         await db.collection('objects').updateMany(filter, {
-          $set: { houseId: user.houseId, createdBy: user._id }
+          $set: { houseId: user.houseId, createdBy: user._id }, $unset: { userId: '' }
         }, { session });
         await db.collection('tasks').updateMany(filter, {
-          $set: { houseId: user.houseId }
+          $set: { houseId: user.houseId }, $unset: { userId: '' }
         }, { session });
       });
     }
@@ -62,6 +78,39 @@ try {
         await tips.countDocuments(withoutHouse)) {
       throw new Error('Ainda há dados sem casa. Confirma que a API está parada antes de repetir.');
     }
+    // A demonstração passa a usar uma casa partilhada pela Ana, Bruno e gestor.
+    const demoOwner = await users.findOne({ email: 'ana@keepwell.test' });
+    if (demoOwner) {
+      for (const email of ['bruno@keepwell.test', 'admin@keepwell.test', 'gestor@keepwell.test']) {
+        await withDatabaseTransaction(async (db, session) => {
+          const member = await db.collection('users').findOne({ email }, { session });
+          if (!member) return;
+          if (email === 'admin@keepwell.test' && await db.collection('users').findOne({ email: 'gestor@keepwell.test' }, { session })) {
+            throw new Error('Existem contas admin e gestor de demonstração. Resolve a duplicação antes de migrar.');
+          }
+          const role = email === 'bruno@keepwell.test' ? 'member' : 'manager';
+          const source = member.houseId;
+          if (!source.equals(demoOwner.houseId)) {
+            const count = await db.collection('users').countDocuments({ houseId: source }, { session });
+            if (count !== 1) throw new Error('Uma casa de demonstração já tem outros membros. Confirma os dados antes de migrar.');
+            for (const collection of ['objects', 'tasks', 'tips']) {
+              await db.collection(collection).updateMany({ houseId: source }, { $set: { houseId: demoOwner.houseId } }, { session });
+            }
+          }
+          await db.collection('users').updateOne({ _id: member._id }, {
+            $set: {
+              houseId: demoOwner.houseId, houseRole: role,
+              ...(email === 'admin@keepwell.test' && { email: 'gestor@keepwell.test' }),
+              updatedAt: new Date()
+            }
+          }, { session });
+          if (!source.equals(demoOwner.houseId)) await db.collection('houses').deleteOne({ _id: source }, { session });
+        });
+      }
+    }
+    await users.updateMany({ houseId: { $type: 'objectId' } }, { $unset: { role: '' } });
+    await objects.updateMany({ houseId: { $type: 'objectId' }, createdBy: { $type: 'objectId' } }, { $unset: { userId: '' } });
+    await tasks.updateMany({ houseId: { $type: 'objectId' } }, { $unset: { userId: '' } });
     console.log('Objetos, cuidados e dicas associados às casas.');
   }
 } catch (error) {

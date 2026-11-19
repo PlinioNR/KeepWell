@@ -6,21 +6,20 @@ import { requirePhotoUploadAccess, saveObjectPhoto, getObjectPhoto, deleteObject
 import { receivePhoto, limitPhotoConcurrency } from '../middleware/receive-photo.js';
 import { parseObjectId } from '../models/object.js';
 import { getDatabase } from '../database.js';
+import { requireHouse } from '../middleware/require-house.js';
 import { requireAuth } from '../middleware/require-auth.js';
 import { createObject, listObjects, getObject, updateObject, deleteObject } from '../services/objects.js';
 
 const router = Router();
 router.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
-router.use(requireAuth);
+router.use(requireAuth, requireHouse);
 router.use((req, _res, next) => {
-  const { _id, houseId } = req.auth.user;
-  // Até à migração, contas sem casa mantêm acesso aos seus objetos antigos.
-  req.objectScope = houseId ? { houseId } : { userId: _id, houseId: { $exists: false } };
+  req.objectScope = { houseId: req.auth.user.houseId };
   next();
 });
 
 async function requireObjectManager(req, res, next) {
-  if (!req.auth.user.houseId || ['owner', 'manager'].includes(req.auth.user.houseRole)) return next();
+  if (['owner', 'manager'].includes(req.auth.user.houseRole)) return next();
   const exists = await getDatabase().collection('objects').findOne(
     { _id: parseObjectId(req.params.id), ...req.objectScope }, { projection: { _id: 1 } }
   );
@@ -30,7 +29,7 @@ async function requireObjectManager(req, res, next) {
 
 router.post('/', async (req, res) => {
   if (!req.is('application/json')) return res.status(415).json({ error: 'Usa Content-Type: application/json.' });
-  const object = await createObject(req.body, req.auth.user._id, req.auth.user.houseId);
+  const object = await createObject(req.body, req.auth.user._id, req.auth.user.houseId, req.auth.user);
   res.location(`/objects/${object.id}`).status(201).json({ object });
 });
 router.get('/', async (req, res) => {
@@ -41,11 +40,11 @@ router.get('/:id', async (req, res) => {
 });
 router.patch('/:id', requireObjectManager, async (req, res) => {
   if (!req.is('application/json')) return res.status(415).json({ error: 'Usa Content-Type: application/json.' });
-  const object = await updateObject(req.params.id, req.body, req.objectScope);
+  const object = await updateObject(req.params.id, req.body, req.objectScope, req.auth.user);
   res.status(200).json({ object });
 });
 router.delete('/:id', requireObjectManager, async (req, res) => {
-  await deleteObject(req.params.id, req.objectScope);
+  await deleteObject(req.params.id, req.objectScope, req.auth.user);
   res.status(204).end();
 });
 const photoRateLimit = rateLimit({
@@ -67,7 +66,7 @@ router.put('/:id/photo', photoRateLimit, requirePhotoUploadAccess, limitPhotoCon
   if (!req.is('multipart/form-data')) return res.status(415).json({ error: 'Envia a fotografia como multipart/form-data.' });
   next();
 }, receivePhoto, async (req, res) => {
-  const object = await saveObjectPhoto(req.params.id, req.photoUploadScope, req.file?.buffer);
+  const object = await saveObjectPhoto(req.params.id, req.file?.buffer, req.auth.user);
   res.status(200).json({ object });
 });
 router.get('/:id/photo', async (req, res) => {
@@ -76,7 +75,7 @@ router.get('/:id/photo', async (req, res) => {
   res.type('image/jpeg').status(200).send(image);
 });
 router.delete('/:id/photo', requireObjectManager, async (req, res) => {
-  await deleteObjectPhoto(req.params.id, req.objectScope);
+  await deleteObjectPhoto(req.params.id, req.objectScope, req.auth.user);
   res.status(204).end();
 });
 router.get('/:id/history', async (req, res) => {

@@ -35,7 +35,7 @@ try {
   response = await post(input);
   const body = await response.json();
   assert.equal(response.status, 201);
-  assert.equal(body.user.role, 'user');
+  assert.ok(!('role' in body.user));
   assert.ok(!('passwordHash' in body.user));
   assert.ok(!('password' in body.user));
   const saved = await users.findOne({ email });

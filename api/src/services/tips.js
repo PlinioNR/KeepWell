@@ -1,3 +1,4 @@
+import { lockHouseActor } from './house-access.js';
 import { ObjectId } from 'mongodb';
 import { getDatabase, withDatabaseTransaction } from '../database.js';
 import { toPublicTip } from '../models/tip.js';
@@ -39,9 +40,9 @@ async function confirmCategory(database, session, categoryId) {
   if (!result.matchedCount) throw Object.assign(new Error('Categoria não encontrada.'), { status: 404 });
 }
 
-export async function listTips({ categoryId, search, ...pagination }) {
+export async function listTips({ categoryId, search, ...pagination }, scope) {
   const { page, pageSize } = parseTaskPagination(pagination);
-  const filter = {};
+  const filter = { ...scope };
   if (categoryId !== undefined) filter.categoryId = parseCategoryId(categoryId);
   const { name } = parseCategorySearch({ search });
   if (name) filter.title = name;
@@ -53,37 +54,42 @@ export async function listTips({ categoryId, search, ...pagination }) {
   return { tips: tips.map(toPublicTip), page, pageSize, total };
 }
 
-export async function getTip(id) {
-  const tip = await getDatabase().collection('tips').findOne({ _id: parseTipId(id) });
+export async function getTip(id, scope) {
+  const tip = await getDatabase().collection('tips').findOne({ _id: parseTipId(id), ...scope });
   if (!tip) throw Object.assign(new Error('Dica não encontrada.'), { status: 404 });
   return toPublicTip(tip);
 }
 
-export async function createTip(body) {
+export async function createTip(body, actor) {
   const fields = tipFields(body);
   return withDatabaseTransaction(async (database, session) => {
+    await lockHouseActor(database, session, actor, ['owner', 'manager']);
     await confirmCategory(database, session, fields.categoryId);
     const now = new Date();
-    const tip = { ...fields, createdAt: now, updatedAt: now };
+    const tip = { ...fields, houseId: actor.houseId, createdAt: now, updatedAt: now };
     const { insertedId } = await database.collection('tips').insertOne(tip, { session });
     return toPublicTip({ ...tip, _id: insertedId });
   });
 }
 
-export async function updateTip(id, body) {
+export async function updateTip(id, body, actor) {
   const _id = parseTipId(id);
   const changes = tipFields(body, true);
   return withDatabaseTransaction(async (database, session) => {
+    await lockHouseActor(database, session, actor, ['owner', 'manager']);
     if (changes.categoryId) await confirmCategory(database, session, changes.categoryId);
     const tip = await database.collection('tips').findOneAndUpdate(
-      { _id }, { $set: { ...changes, updatedAt: new Date() } }, { session, returnDocument: 'after' }
+      { _id, houseId: actor.houseId }, { $set: { ...changes, updatedAt: new Date() } }, { session, returnDocument: 'after' }
     );
     if (!tip) throw Object.assign(new Error('Dica não encontrada.'), { status: 404 });
     return toPublicTip(tip);
   });
 }
 
-export async function deleteTip(id) {
-  const result = await getDatabase().collection('tips').deleteOne({ _id: parseTipId(id) });
-  if (!result.deletedCount) throw Object.assign(new Error('Dica não encontrada.'), { status: 404 });
+export async function deleteTip(id, actor) {
+  return withDatabaseTransaction(async (database, session) => {
+    await lockHouseActor(database, session, actor, ['owner', 'manager']);
+    const result = await database.collection('tips').deleteOne({ _id: parseTipId(id), houseId: actor.houseId }, { session });
+    if (!result.deletedCount) throw Object.assign(new Error('Dica não encontrada.'), { status: 404 });
+  });
 }

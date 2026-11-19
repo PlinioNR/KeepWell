@@ -43,7 +43,7 @@ try {
   assert.equal(object.acquiredOn, '2023-07-03');
   assert.equal(object.description, 'Computador pessoal.');
   const saved = await database.collection('objects').findOne({ _id: new ObjectId(object.id) });
-  assert.ok(saved.userId.equals(userIds[0]));
+  assert.ok(saved.createdBy.equals(userIds[0]));
   assert.equal(saved.description, 'Computador pessoal.');
   assert.ok(saved.categoryId.equals(categoryIds[0]));
   response = await request(0, 'GET');
@@ -103,7 +103,7 @@ try {
     assert.equal((await request(0, 'GET', path)).status, 400);
   }
   await database.collection('objects').deleteMany({
-    _id: { $in: extraObjects.map(item => new ObjectId(item.id)) }, userId: { $in: userIds }
+    _id: { $in: extraObjects.map(item => new ObjectId(item.id)) }, houseId: { $in: houseIds }
   });
   await deleteCategory(filterCategory.id);
   await assert.rejects(deleteCategory(category.id), { status: 409 });
@@ -184,7 +184,7 @@ try {
     // Elimina apenas dados pertencentes às contas aleatórias deste teste.
     if (userIds.length) await database.collection('tasks').deleteMany({ userId: { $in: userIds } });
     if (userIds.length) {
-      await database.collection('objects').deleteMany({ userId: { $in: userIds } });
+      await database.collection('objects').deleteMany({ houseId: { $in: houseIds } });
       await database.collection('sessions').deleteMany({ userId: { $in: userIds } });
       await database.collection('users').deleteMany({ _id: { $in: userIds }, email: { $in: emails } });
       await database.collection('houses').deleteMany({ _id: { $in: houseIds } });

@@ -1,9 +1,10 @@
 import { requireAuth } from './middleware/require-auth.js';
-import { requireAdmin } from './middleware/require-admin.js';
+import { requireHouse, requireHouseRole } from './middleware/require-house.js';
 import { checkPhotoStorage } from './storage/photo-files.js';
 import multer from 'multer';
 import express from 'express';
 import { pingDatabase } from './database.js';
+import houseRoutes from './routes/houses.js';
 import authRoutes from './routes/auth.js';
 import categoryRoutes from './routes/categories.js';
 import objectRoutes from './routes/objects.js';
@@ -47,7 +48,7 @@ app.get('/health/database', async (_req, res) => {
 });
 
 // A verificação escreve no disco, por isso exige uma sessão de administrador.
-app.get('/health/storage', requireAuth, requireAdmin, async (_req, res) => {
+app.get('/health/storage', requireAuth, requireHouse, requireHouseRole('owner'), async (_req, res) => {
   res.set('Cache-Control', 'no-store');
   try {
     await checkPhotoStorage();
@@ -59,6 +60,7 @@ app.get('/health/storage', requireAuth, requireAdmin, async (_req, res) => {
 
 // Agrupa as rotas de conta no prefixo /auth.
 app.use('/auth', authRoutes);
+app.use('/house', houseRoutes);
 app.use('/categories', categoryRoutes);
 app.use('/objects', objectRoutes);
 app.use('/tasks', taskRoutes);

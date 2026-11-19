@@ -35,20 +35,12 @@ export function parseCategorySearch(query = {}) {
   return search ? { name: { $regex: search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } } : {};
 }
 
-export async function listCategories(query = {}, isAdmin = false) {
-  const database = getDatabase();
-  const categories = await database.collection('categories')
+export async function listCategories(query = {}) {
+  const categories = await getDatabase().collection('categories')
     .find(parseCategorySearch(query)).collation({ locale: 'pt', strength: 2 }).sort({ name: 1 }).toArray();
-  const result = categories.map(toPublicCategory);
-  if (!isAdmin || !categories.length) return result;
-  // Só o administrador recebe contagens globais, calculadas a partir dos objetos.
-  const counts = await database.collection('objects').aggregate([
-    { $match: { categoryId: { $in: categories.map(category => category._id) } } },
-    { $group: { _id: '$categoryId', count: { $sum: 1 } } }
-  ]).toArray();
-  const byId = new Map(counts.map(item => [item._id.toString(), item.count]));
-  return result.map(category => ({ ...category, objectCount: byId.get(category.id) ?? 0 }));
+  return categories.map(toPublicCategory);
 }
+
 export async function getCategory(id) {
   const category = await getDatabase().collection('categories').findOne({ _id: parseCategoryId(id) });
   if (!category) throw Object.assign(new Error('Categoria não encontrada.'), { status: 404 });

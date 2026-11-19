@@ -236,9 +236,9 @@ O código é escrito por dois estudantes a aprender Flutter, por isso segue regr
 | Objetos | Criação, consulta, pesquisa, filtros e fotografia disponíveis na app. |
 | Cuidados e histórico | Criação e conclusão ligadas à app. A API disponibiliza edição, histórico, descrição e observações de conclusão. |
 | Análise de fotografias | Preenchimento de nome e categoria testado no Chrome. As sugestões de cuidados estão disponíveis na API. |
-| Casas e papéis | Modelo e criação da casa no registo implementados no código. Registo transacional validado numa base temporária do Atlas. Convites e gestão de membros por implementar. |
+| Casas e papéis | Registo transacional, convites e gestão de membros implementados e testados em bases temporárias do Atlas. Integração dos ecrãs da casa pendente. |
 | Migração dos dados | Scripts para associar contas, objetos, cuidados e dicas a casas preparados. Scripts validados numa base temporária do Atlas. Falta aplicar a migração na base partilhada. |
-| Permissões, categorias e dicas | Objetos, fotografias e histórico já usam permissões por casa. Cuidados, notificações, categorias e dicas ainda usam as regras anteriores. |
+| Permissões, categorias e dicas | Objetos, fotos, histórico, cuidados, notificações e dicas usam a casa. Categorias só de consulta. Dono, gestor e membro testados na API. |
 
 Os comandos da API estão no [README da API](api/README.md). Os problemas e testes estão no [diário técnico](docs/diario-tecnico.md). O planeamento completo está no [EDT](EDT.md).
 

@@ -1,13 +1,16 @@
+import { scopeFor, lockHouseActor } from './house-access.js';
 import { parseObjectId } from '../models/object.js';
 import { getDatabase, withDatabaseTransaction } from '../database.js';
 import { buildTask, parseTaskId, toPublicTask, validateTaskDate } from '../models/task.js';
 
-export async function createTask(body, userId) {
-  const task = buildTask(body, userId);
+export async function createTask(body, actor) {
+  const task = buildTask(body, actor._id ?? actor);
+  if (actor.houseId) { task.houseId = actor.houseId; delete task.userId; }
   return withDatabaseTransaction(async (database, session) => {
+    await lockHouseActor(database, session, actor, ['owner', 'manager']);
     // Escreve no mesmo objeto usado por deleteObject: evita tarefas órfãs.
     const object = await database.collection('objects').findOneAndUpdate(
-      { _id: task.objectId, userId }, { $inc: { referenceVersion: 1 } },
+      { _id: task.objectId, ...scopeFor(actor) }, { $inc: { referenceVersion: 1 } },
       { session, returnDocument: 'after', projection: { _id: 1 } }
     );
     // Mesma mensagem para um objeto inexistente ou pertencente a outra pessoa.
@@ -38,7 +41,7 @@ export function lisbonDate(now) {
 }
 
 export function buildTaskFilter(userId, { objectId, status, dueFrom, dueTo }, now = new Date()) {
-  const filter = { userId };
+  const filter = userId?.houseId ? { houseId: userId.houseId } : { userId };
   if (objectId !== undefined) filter.objectId = parseObjectId(objectId);
   const range = {};
   if (dueFrom !== undefined) range.$gte = validateTaskDate(dueFrom);
@@ -64,11 +67,11 @@ export function buildTaskFilter(userId, { objectId, status, dueFrom, dueTo }, no
   return filter;
 }
 
-async function tasksWithObjectName(tasks, userId) {
+async function tasksWithObjectName(tasks, scope) {
   if (!tasks.length) return [];
   // Uma consulta para os nomes de todos os objetos da página.
   const objects = await getDatabase().collection('objects').find(
-    { userId, _id: { $in: tasks.map(task => task.objectId) } },
+    { ...scope, _id: { $in: tasks.map(task => task.objectId) } },
     { projection: { name: 1 } }
   ).toArray();
   const names = new Map(objects.map(object => [object._id.toString(), object.name]));
@@ -84,7 +87,7 @@ async function readTaskPage(filter, { page, pageSize }) {
     collection.find(filter).sort({ dueOn: 1, _id: 1 }).skip((page - 1) * pageSize).limit(pageSize).toArray(),
     collection.countDocuments(filter)
   ]);
-  return { tasks: await tasksWithObjectName(tasks, filter.userId), page, pageSize, total };
+  return { tasks: await tasksWithObjectName(tasks, filter.houseId ? { houseId: filter.houseId } : { userId: filter.userId }), page, pageSize, total };
 }
 
 export async function listTasks(userId, query = {}) {
@@ -99,13 +102,13 @@ export async function listReminders(user, query) {
     return { tasks: [], ...page, total: 0 };
   }
 
-  const upcoming = buildTaskFilter(user._id, { status: 'pending' });
+  const upcoming = buildTaskFilter(user, { status: 'pending' });
   return readTaskPage({ ...upcoming, reminderEnabled: true }, page);
 }
-export async function getTask(id, userId) {
-  const task = await getDatabase().collection('tasks').findOne({ _id: parseTaskId(id), userId });
+export async function getTask(id, actor) {
+  const task = await getDatabase().collection('tasks').findOne({ _id: parseTaskId(id), ...scopeFor(actor) });
   if (!task) throw Object.assign(new Error('Cuidado não encontrado.'), { status: 404 });
-  const [result] = await tasksWithObjectName([task], userId);
+  const [result] = await tasksWithObjectName([task], scopeFor(actor));
   return result;
 }
 
@@ -121,20 +124,21 @@ export function validateCompletion(body = {}) {
   return notes.trim();
 }
 
-export async function completeTask(id, body, userId) {
+export async function completeTask(id, body, actor) {
   const _id = parseTaskId(id);
   const notes = validateCompletion(body);
   const now = new Date();
 
   return withDatabaseTransaction(async (database, session) => {
+    await lockHouseActor(database, session, actor, ['owner', 'manager']);
     const collection = database.collection('tasks');
     const completed = await collection.findOneAndUpdate(
-      { _id, userId, status: 'pending' },
+      { _id, ...scopeFor(actor), status: 'pending' },
       { $set: { status: 'completed', completedAt: now, notes, updatedAt: now } },
       { session, returnDocument: 'after' }
     );
     if (!completed) {
-      const current = await collection.findOne({ _id, userId }, { session });
+      const current = await collection.findOne({ _id, ...scopeFor(actor) }, { session });
       if (!current) throw Object.assign(new Error('Cuidado não encontrado.'), { status: 404 });
       return toPublicTask(current);
     }
@@ -149,7 +153,8 @@ export async function completeTask(id, body, userId) {
         dueOn: nextDate.toISOString().slice(0, 10),
         repeatEveryDays: completed.repeatEveryDays,
         reminderEnabled: completed.reminderEnabled
-      }, userId);
+      }, actor._id ?? actor);
+      if (actor.houseId) { next.houseId = actor.houseId; delete next.userId; }
       // A conclusão e o novo cuidado são confirmados juntos.
       await collection.insertOne(next, { session });
     }
@@ -163,7 +168,7 @@ export async function listObjectHistory(id, scope, query) {
   const object = await database.collection('objects').findOne({ _id: objectId, ...scope }, { projection: { name: 1, createdAt: 1 } });
   if (!object) throw Object.assign(new Error('Objeto não encontrado.'), { status: 404 });
   const collection = database.collection('tasks');
-  const filter = { objectId, status: 'completed' };
+  const filter = { ...scope, objectId, status: 'completed' };
   const [tasks, total] = await Promise.all([
     collection.find(filter).sort({ completedAt: -1, _id: -1 }).skip((page - 1) * pageSize).limit(pageSize).toArray(),
     collection.countDocuments(filter)
@@ -183,48 +188,54 @@ export async function listObjectHistory(id, scope, query) {
 
 
 
-async function rejectPendingChange(collection, filter) {
-  const existing = await collection.findOne(filter, { projection: { _id: 1 } });
+async function rejectPendingChange(collection, filter, session) {
+  const existing = await collection.findOne(filter, { session, projection: { _id: 1 } });
   if (!existing) throw Object.assign(new Error('Cuidado não encontrado.'), { status: 404 });
   throw Object.assign(new Error('O cuidado já foi concluído.'), { status: 409 });
 }
 
-export async function updateTask(id, body, userId) {
+export async function updateTask(id, body, actor) {
   if (!body || typeof body !== 'object' || Array.isArray(body) ||
       !Object.keys(body).length || Object.keys(body).some(key => !['title', 'description', 'dueOn', 'repeatEveryDays', 'reminderEnabled'].includes(key))) {
     throw Object.assign(new Error('Envia title, description, dueOn, repeatEveryDays e/ou reminderEnabled.'), { status: 400 });
   }
-  const filter = { _id: parseTaskId(id), userId };
-  const collection = getDatabase().collection('tasks');
-  const current = await collection.findOne({ ...filter, status: 'pending' });
-  if (!current) return rejectPendingChange(collection, filter);
-  const validated = buildTask({
-    objectId: current.objectId.toString(),
-    title: Object.hasOwn(body, 'title') ? body.title : current.title,
-    description: body.description,
-    dueOn: Object.hasOwn(body, 'dueOn') ? body.dueOn : current.dueOn,
-    repeatEveryDays: body.repeatEveryDays,
-    reminderEnabled: body.reminderEnabled
-  }, userId);
-  // Grava só os campos enviados para preservar alterações simultâneas noutros campos.
-  const changes = { updatedAt: validated.updatedAt };
-  if (Object.hasOwn(body, 'title')) changes.title = validated.title;
-  if (Object.hasOwn(body, 'description')) changes.description = validated.description;
-  if (Object.hasOwn(body, 'dueOn')) changes.dueOn = validated.dueOn;
-  if (Object.hasOwn(body, 'repeatEveryDays')) changes.repeatEveryDays = validated.repeatEveryDays;
-  if (Object.hasOwn(body, 'reminderEnabled')) changes.reminderEnabled = validated.reminderEnabled;
-  const updated = await collection.findOneAndUpdate(
-    { ...filter, status: 'pending' }, { $set: changes }, { returnDocument: 'after' }
-  );
-  if (!updated) return rejectPendingChange(collection, filter);
-  return toPublicTask(updated);
+  return withDatabaseTransaction(async (database, session) => {
+    await lockHouseActor(database, session, actor, ['owner', 'manager']);
+    const filter = { _id: parseTaskId(id), ...scopeFor(actor) };
+    const collection = database.collection('tasks');
+    const current = await collection.findOne({ ...filter, status: 'pending' }, { session });
+    if (!current) return rejectPendingChange(collection, filter, session);
+    const validated = buildTask({
+      objectId: current.objectId.toString(),
+      title: Object.hasOwn(body, 'title') ? body.title : current.title,
+      description: body.description,
+      dueOn: Object.hasOwn(body, 'dueOn') ? body.dueOn : current.dueOn,
+      repeatEveryDays: body.repeatEveryDays,
+      reminderEnabled: body.reminderEnabled
+    }, actor._id ?? actor);
+    // Grava só os campos enviados para preservar alterações simultâneas noutros campos.
+    const changes = { updatedAt: validated.updatedAt };
+    if (Object.hasOwn(body, 'title')) changes.title = validated.title;
+    if (Object.hasOwn(body, 'description')) changes.description = validated.description;
+    if (Object.hasOwn(body, 'dueOn')) changes.dueOn = validated.dueOn;
+    if (Object.hasOwn(body, 'repeatEveryDays')) changes.repeatEveryDays = validated.repeatEveryDays;
+    if (Object.hasOwn(body, 'reminderEnabled')) changes.reminderEnabled = validated.reminderEnabled;
+    const updated = await collection.findOneAndUpdate(
+      { ...filter, status: 'pending' }, { $set: changes }, { session, returnDocument: 'after' }
+    );
+    if (!updated) return rejectPendingChange(collection, filter, session);
+    return toPublicTask(updated);
+  });
 }
 
-export async function deleteTask(id, userId) {
-  const filter = { _id: parseTaskId(id), userId };
-  const collection = getDatabase().collection('tasks');
-  const result = await collection.deleteOne({ ...filter, status: 'pending' });
-  if (!result.deletedCount) await rejectPendingChange(collection, filter);
+export async function deleteTask(id, actor) {
+  const filter = { _id: parseTaskId(id), ...scopeFor(actor) };
+  return withDatabaseTransaction(async (database, session) => {
+    await lockHouseActor(database, session, actor, ['owner', 'manager']);
+    const collection = database.collection('tasks');
+    const result = await collection.deleteOne({ ...filter, status: 'pending' }, { session });
+    if (!result.deletedCount) await rejectPendingChange(collection, filter, session);
+  });
 }
 
 

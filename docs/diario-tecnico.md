@@ -104,3 +104,23 @@ Guardar comandos e caminhos úteis sem incluir palavras-passe, tokens ou chaves.
 - **Diagnóstico.** A chamada que acrescenta o próximo cuidado aos objetos ainda usava a variável do filtro antigo.
 - **Solução.** Consultar o próximo cuidado pelos IDs dos objetos já autorizados, mantendo o filtro de data e estado.
 - **Validação.** Passaram as verificações de objetos, fotografias e cuidados numa base temporária do Atlas, incluindo acesso entre membros da mesma casa e bloqueio entre casas.
+
+### 19/11/2026 — migração do backend para casas
+
+- **Implementado.** Cuidados, dicas e notificações passaram a usar houseId. Foram acrescentadas as rotas /house para consulta, nome, convites, entrada, saída e gestão de membros. As rotas de escrita de categorias e a promoção global a administrador foram retiradas.
+- **Decisão técnica.** Cada escrita revalida a pertença e o papel dentro de uma transação. O contador interno referenceVersion da casa coordena essas escritas com a entrada, saída e remoção de pessoas. Se uma entrada competir com uma criação de objeto, a API repete a transação ou recusa a operação cujo contexto já mudou.
+- **Validação.** O teste isolado cobriu os três papéis, convites errados, expirados e renovados, isolamento entre casas, fotos, histórico, cuidados recorrentes, notificações, dicas e concorrência. A migração e o seed foram repetidos sem duplicados. A regressão de registo, autenticação, objetos, fotos e cuidados passou numa base descartável.
+- **Estado.** A base partilhada continua por migrar. A app precisa de ligar os ecrãs de casa e adaptar os botões aos papéis.
+
+### A primeira versão do teste concorrente exigia que os dois pedidos fossem aceites
+
+- **Problema.** O teste enviava a criação de um objeto ao mesmo tempo que a entrada noutra casa e esperava sempre 201 na criação. Recebeu 403 quando a entrada ganhou a corrida.
+- **Diagnóstico.** A mudança de casa invalidou o contexto usado pelo pedido de criação. A revalidação transacional recusou esse pedido, como previsto.
+- **Solução.** O teste passou a aceitar as duas ordens possíveis e a verificar que nenhum objeto aponta para uma casa apagada.
+- **Validação.** A integração passou com a verificação de integridade dos objetos.
+
+### Atualizar os testes antigos ao retirar userId e admin
+
+- **Problema.** As verificações antigas usavam userId para procurar e limpar dados e chamavam as rotas de gestão global de categorias.
+- **Solução.** Adaptar as verificações de objetos, fotos e cuidados a houseId e aos papéis da casa. O teste antigo de administração de categorias foi substituído pela verificação de categorias só de leitura no teste de casas.
+- **Validação.** As verificações de regressão passaram numa base temporária. O comando test:backend executa testes locais, regras de casas e migração em bases isoladas.

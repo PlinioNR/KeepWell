@@ -2,7 +2,7 @@
 export const userValidator = {
   $jsonSchema: {
     bsonType: 'object',
-    required: ['name', 'email', 'passwordHash', 'role', 'createdAt', 'updatedAt'],
+    required: ['name', 'email', 'passwordHash', 'createdAt', 'updatedAt'],
     additionalProperties: false,
     dependencies: { houseId: ['houseRole'], houseRole: ['houseId'] },
     properties: {
@@ -53,7 +53,7 @@ export function buildUser({ name, email, passwordHash } = {}) {
   const now = new Date();
   return {
     name: normalizedName, email: normalizedEmail, passwordHash,
-    role: 'user', createdAt: now, updatedAt: now
+    createdAt: now, updatedAt: now
   };
 }
 
@@ -66,7 +66,7 @@ export function toPublicUser(user) {
       remindersEnabled: user.preferences?.remindersEnabled ?? false
     },
     ...(user.houseId && { houseId: user.houseId.toString(), houseRole: user.houseRole }),
-    role: user.role, createdAt: user.createdAt, updatedAt: user.updatedAt
+    createdAt: user.createdAt, updatedAt: user.updatedAt
   };
 }
 
@@ -84,6 +84,11 @@ export async function setupUsers(database) {
       validator: userValidator, validationLevel: 'strict', validationAction: 'error'
     });
   }
+  await database.collection('users').createIndex({ houseId: 1 }, { name: 'users_house' });
+  await database.collection('users').createIndex({ houseId: 1, houseRole: 1 }, {
+    unique: true, name: 'users_house_owner_unique',
+    partialFilterExpression: { houseRole: 'owner', houseId: { $type: 'objectId' } }
+  });
   // A collation impede também duplicados que diferem apenas em maiúsculas.
   // O índice é a garantia contra dois registos simultâneos com o mesmo email.
   await database.collection('users').createIndex({ email: 1 }, {

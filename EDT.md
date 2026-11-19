@@ -76,7 +76,7 @@ Alteração de âmbito (17/11/2026, combinada com o professor): o administrador 
   - 4.1.2 Ligação à base de dados MongoDB
   - 4.1.3 Dados iniciais (categorias, casa de demonstração com dono, gestor e membro, exemplos)
 - 4.2 Modelos de dados
-  - 4.2.1 Utilizador (com casa e papel)
+  - 4.2.1 Utilizador (com casa e papel) ✅ (backend validado em base temporária)
   - 4.2.2 Categoria
   - 4.2.3 Objeto
   - 4.2.4 Tarefa de manutenção
@@ -84,15 +84,15 @@ Alteração de âmbito (17/11/2026, combinada com o professor): o administrador 
   - 4.2.6 Casa (casas)
 - 4.3 Autenticação e permissões
   - 4.3.1 Registo e início de sessão
-  - 4.3.2 Proteção das rotas por papel na casa (dono/gestor/membro) (casas)
+  - 4.3.2 Proteção das rotas por papel na casa (dono/gestor/membro) (casas) ✅ (API testada)
 - 4.4 Endpoints da API
   - 4.4.1 Objetos (CRUD, pesquisa e filtro)
   - 4.4.2 Tarefas (CRUD, concluir e histórico)
   - 4.4.3 Repetição de tarefas
-  - 4.4.4 Categorias (lista fixa, só consulta) (casas)
-  - 4.4.5 Dicas (consulta; gestão por dono e gestor) (casas)
-  - 4.4.6 Casa e convites (código, entrar, sair, papéis) (casas)
-  - 4.4.7 Migração dos dados existentes para casas (casas)
+  - 4.4.4 Categorias (lista fixa, só consulta) (casas) ✅
+  - 4.4.5 Dicas (consulta; gestão por dono e gestor) (casas) ✅ (API testada)
+  - 4.4.6 Casa e convites (código, entrar, sair, papéis) (casas) ✅ (API testada)
+  - 4.4.7 Migração dos dados existentes para casas (casas) ◐ (scripts testados, aplicação na base partilhada pendente)
 - 4.5 Fotografias
   - 4.5.1 Envio e armazenamento
   - 4.5.2 Disponibilização das imagens à app

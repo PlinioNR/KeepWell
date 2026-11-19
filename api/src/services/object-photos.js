@@ -1,4 +1,5 @@
-import { getDatabase } from '../database.js';
+import { lockHouseActor } from './house-access.js';
+import { getDatabase, withDatabaseTransaction } from '../database.js';
 import { parseObjectId, toPublicObject } from '../models/object.js';
 import { normalizePhoto, writePhotoFile, readPhotoFile, removePhotoFile } from '../storage/photo-files.js';
 
@@ -15,14 +16,11 @@ export async function requirePhotoUploadAccess(req, res, next) {
     if (!object.createdBy?.equals(user._id) || object.photoKey) {
       return res.status(403).json({ error: 'Não tens permissão para esta ação.' });
     }
-    req.photoUploadScope = { ...scope, createdBy: user._id, photoKey: null };
-  } else {
-    req.photoUploadScope = scope;
   }
   next();
 }
 
-export async function saveObjectPhoto(id, scope, buffer) {
+export async function saveObjectPhoto(id, buffer, actor) {
   const _id = parseObjectId(id);
   const normalized = await normalizePhoto(buffer);
   const key = await writePhotoFile(normalized);
@@ -31,9 +29,19 @@ export async function saveObjectPhoto(id, scope, buffer) {
   let previous;
   try {
     // Atualização atómica: a resposta anterior identifica apenas o ficheiro substituído.
-    previous = await objects.findOneAndUpdate(
-      { _id, ...scope }, { $set: { photoKey: key, updatedAt } }, { returnDocument: 'before' }
-    );
+    previous = await withDatabaseTransaction(async (database, session) => {
+      const currentActor = await lockHouseActor(database, session, actor);
+      const filter = { _id, houseId: actor.houseId };
+      if (currentActor.houseRole === 'member') Object.assign(filter, { createdBy: actor._id, photoKey: null });
+      const found = await database.collection('objects').findOneAndUpdate(
+        filter, { $set: { photoKey: key, updatedAt } }, { session, returnDocument: 'before' }
+      );
+      if (!found) {
+        const exists = await database.collection('objects').findOne({ _id, houseId: actor.houseId }, { session });
+        throw Object.assign(new Error(exists ? 'Não tens permissão para esta ação.' : 'Objeto não encontrado.'), { status: exists ? 403 : 404 });
+      }
+      return found;
+    });
   } catch (error) {
     // Se houve falha na resposta da BD, confirma antes de apagar o novo ficheiro.
     try {
@@ -41,10 +49,6 @@ export async function saveObjectPhoto(id, scope, buffer) {
       if (!linked) await removePhotoFile(key);
     } catch { console.error('Limpeza de fotografia pendente após falha de ligação.'); }
     throw error;
-  }
-  if (!previous) {
-    await removePhotoFile(key);
-    throw Object.assign(new Error('Objeto não encontrado.'), { status: 404 });
   }
   await removePhotoFile(previous.photoKey);
   return toPublicObject({ ...previous, photoKey: key, updatedAt });
@@ -57,10 +61,13 @@ export async function getObjectPhoto(id, scope) {
   return readPhotoFile(object.photoKey);
 }
 
-export async function deleteObjectPhoto(id, scope) {
-  const object = await getDatabase().collection('objects').findOneAndUpdate(
-    { _id: parseObjectId(id), ...scope }, { $set: { photoKey: null, updatedAt: new Date() } }, { returnDocument: 'before' }
-  );
+export async function deleteObjectPhoto(id, scope, actor) {
+  const object = await withDatabaseTransaction(async (database, session) => {
+    await lockHouseActor(database, session, actor, ['owner', 'manager']);
+    return database.collection('objects').findOneAndUpdate(
+      { _id: parseObjectId(id), ...scope }, { $set: { photoKey: null, updatedAt: new Date() } }, { session, returnDocument: 'before' }
+    );
+  });
   if (!object) throw Object.assign(new Error('Objeto não encontrado.'), { status: 404 });
   await removePhotoFile(object.photoKey);
 }

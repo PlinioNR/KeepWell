@@ -18,6 +18,7 @@ export async function setupHouses(database) {
       required: ['name', 'inviteCode', 'inviteExpiresAt', 'createdAt', 'updatedAt'],
       properties: {
         _id: { bsonType: 'objectId' },
+        referenceVersion: { bsonType: ['int', 'long', 'double'] },
         name: { bsonType: 'string', minLength: 2, maxLength: 108 },
         inviteCode: { bsonType: ['string', 'null'], pattern: '^[A-HJ-NP-Z2-9]{8}$' },
         inviteExpiresAt: { bsonType: ['date', 'null'] },

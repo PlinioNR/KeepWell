@@ -1,26 +1,28 @@
+import { scopeFor } from './house-access.js';
 import { getDatabase } from '../database.js';
 import { buildTaskFilter, lisbonDate } from './tasks.js';
 
 const limit = 20;
 
-export async function listNotifications(userId, now = new Date()) {
+export async function listNotifications(actor, now = new Date()) {
   const db = getDatabase();
+  const scope = scopeFor(actor);
   const tasks = db.collection('tasks');
   const objects = db.collection('objects');
   const today = lisbonDate(now);
 
   const [dueToday, overdue, completed, added] = await Promise.all([
-    tasks.find({ userId, status: 'pending', dueOn: today }).sort({ _id: 1 }).limit(limit).toArray(),
-    tasks.find(buildTaskFilter(userId, { status: 'overdue' }, now))
+    tasks.find({ ...scope, status: 'pending', dueOn: today }).sort({ _id: 1 }).limit(limit).toArray(),
+    tasks.find(buildTaskFilter(actor, { status: 'overdue' }, now))
       .sort({ dueOn: -1, _id: -1 }).limit(limit).toArray(),
-    tasks.find({ userId, status: 'completed' }).sort({ completedAt: -1, _id: -1 }).limit(limit).toArray(),
-    objects.find({ userId }, { projection: { name: 1, createdAt: 1 } })
+    tasks.find({ ...scope, status: 'completed' }).sort({ completedAt: -1, _id: -1 }).limit(limit).toArray(),
+    objects.find({ ...scope }, { projection: { name: 1, createdAt: 1 } })
       .sort({ createdAt: -1, _id: -1 }).limit(limit).toArray()
   ]);
 
   // Obtém os nomes numa consulta e mantém a verificação do dono.
   const objectIds = [...dueToday, ...overdue, ...completed].map(task => task.objectId);
-  const names = await objects.find({ userId, _id: { $in: objectIds } }, { projection: { name: 1 } }).toArray();
+  const names = await objects.find({ ...scope, _id: { $in: objectIds } }, { projection: { name: 1 } }).toArray();
   const nameById = new Map(names.map(object => [object._id.toString(), object.name]));
   const taskItem = (task, type) => ({
     id: type + ':' + task._id,

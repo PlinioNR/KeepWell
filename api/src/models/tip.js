@@ -19,6 +19,7 @@ export async function setupTips(database) {
   } else {
     await database.createCollection('tips', { validator });
   }
+  await database.collection('tips').createIndex({ houseId: 1, categoryId: 1, title: 1 }, { name: 'tips_house_category' });
   await database.collection('tips').createIndex({ categoryId: 1, title: 1, _id: 1 });
 }
 
