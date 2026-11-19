@@ -92,7 +92,7 @@ Alteração de âmbito (17/11/2026, combinada com o professor): o administrador 
   - 4.4.4 Categorias (lista fixa, só consulta) (casas) ✅
   - 4.4.5 Dicas por objeto (consulta, vídeo opcional, gestão por dono e gestor) (casas) ✅ (backend)
   - 4.4.6 Casa e convites (código, entrar, sair, papéis) (casas) ✅ (API testada)
-  - 4.4.7 Migração dos dados existentes para casas (casas) ◐ (scripts testados, aplicação na base partilhada pendente)
+  - 4.4.7 Migração dos dados existentes para casas (casas) ✅ (aplicada e verificada a 19/11/2026)
 - 4.5 Fotografias
   - 4.5.1 Envio e armazenamento
   - 4.5.2 Disponibilização das imagens à app

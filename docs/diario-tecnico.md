@@ -151,3 +151,19 @@ Guardar comandos e caminhos úteis sem incluir palavras-passe, tokens ou chaves.
 - **Solução.** Atualizar o userId do objeto “Portátil pessoal” e dos seus dois cuidados na mesma transação, depois de confirmar que a conta antiga já não existia.
 - **Validação.** A comparação dos documentos antes e depois confirmou que apenas a referência ao utilizador mudou. O campo da fotografia, as datas e as observações foram preservados. A consulta de pré-migração encontrou zero objetos e zero cuidados sem utilizador.
 - **Pendente.** Aplicar a migração para casas na base partilhada no momento combinado com a equipa.
+
+### 19/11/2026 — migração aplicada à base partilhada
+
+- **Autorização.** O Rafael confirmou a janela para parar a API e aplicar a migração, incluindo a eliminação das cinco dicas antigas sem objeto.
+- **Cópia de segurança.** Guardado um snapshot EJSON local em C:\Users\rafae\.codex\backups\keepwell-bfb6b26d-0822-4d83-b817-202c73f3dec3\snapshot.ejson, fora do repositório. Inclui os documentos anteriores à migração.
+- **Execução.** Preparação dos validadores e índices, migração das contas e migração dos dados. A demonstração ficou com Ana dona, Bruno membro e gestor gestor da mesma casa. As outras contas têm casas próprias. O seed criou quatro dicas associadas aos objetos.
+- **Ajuste durante a execução.** O seed recriou um “Casaco de couro” de demonstração que já não estava na base. Foi removido apenas esse novo exemplo depois de confirmar que não tinha fotografia, cuidados nem dicas.
+- **Validação dos dados.** Os dez objetos e doze cuidados anteriores mantêm os IDs, campos do utilizador, datas e fotografias referenciadas. As palavras-passe das cinco contas foram preservadas. Todas as casas têm um dono. As dicas apontam para objetos da mesma casa. A base ficou com cinco contas, três casas, dez objetos, doze cuidados, quatro dicas e oito categorias.
+- **Validação HTTP.** A API foi iniciada e o health/database respondeu com sucesso. Os logins das três contas de demonstração passaram e devolveram os papéis esperados. As três contas viram os mesmos sete objetos e quatro dicas da casa. O Bruno recebeu 403 ao tentar criar um cuidado. As sessões de teste foram terminadas.
+- **Próximo passo.** Integrar e validar os ecrãs da casa e os botões conforme o papel no Flutter.
+
+### Comparar o snapshot BSON com os dados migrados
+
+- **Problema.** A primeira comparação também incluía referenceVersion, um contador interno que muda ao criar uma dica. A comparação seguinte encontrou instâncias ObjectId de bibliotecas BSON diferentes.
+- **Solução.** Comparar os valores em EJSON canónico, retirando da comparação os campos de pertença migrados e o contador técnico.
+- **Validação.** A comparação confirmou os campos originais dos objetos, cuidados e categorias. A verificação dos totais detetou o exemplo adicional do seed, que foi retirado.
