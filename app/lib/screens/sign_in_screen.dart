@@ -47,6 +47,7 @@ class _SignInScreenState extends State<SignInScreen> {
   ///
   /// É "async" porque tem de esperar ("await") pela resposta da API.
   Future<void> _signIn() async {
+    if (_isLoading) return;
     // validate() corre o validator de cada campo e mostra os erros.
     final isValid = _formKey.currentState!.validate();
     if (!isValid) return;
@@ -74,7 +75,16 @@ class _SignInScreenState extends State<SignInScreen> {
       // Ex.: "Email ou palavra-passe incorretos."
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(error.message)));
-      setState(() => _isLoading = false);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível concluir o login. Tente novamente.'),
+        ),
+      );
+    } finally {
+      // Liberta o botão também se houver uma resposta inesperada.
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

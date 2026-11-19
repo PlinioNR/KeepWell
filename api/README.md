@@ -20,8 +20,9 @@ npm.cmd run dev
 O servidor usa a porta 3000 por defeito. HOST permite escolher o endereço
 de escuta. A app Android no emulador usa http://10.0.2.2:3000. O Chrome usa
 http://localhost:3000, com a app em http://localhost:8080. O CORS permite
-essa origem local, os métodos das rotas e os cabeçalhos Authorization e
-Content-Type.
+as origens HTTP locais localhost, 127.0.0.1 e [::1], incluindo as portas
+aleatórias escolhidas pelo Flutter. Permite os métodos das rotas e os
+cabeçalhos Authorization e Content-Type.
 
 ```powershell
 cd ..\app

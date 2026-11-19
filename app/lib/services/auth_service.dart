@@ -57,9 +57,23 @@ class AuthService {
     }
 
     // A API responde: {"token": "...", "user": {...}, ...}
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
-    Session.token = body['token'] as String;
-    Session.user = User.fromJson(body['user'] as Map<String, dynamic>);
+    try {
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final token = body['token'] as String;
+      if (token.isEmpty) throw const FormatException('Token vazio.');
+      final user = User.fromJson(body['user'] as Map<String, dynamic>);
+      // Guarda a sessão apenas depois de validar toda a resposta.
+      Session.token = token;
+      Session.user = user;
+    } on FormatException {
+      throw const ApiException(
+        'A resposta do servidor é inválida. Tente novamente.',
+      );
+    } on TypeError {
+      throw const ApiException(
+        'A resposta do servidor é inválida. Tente novamente.',
+      );
+    }
   }
 
   /// Sai da conta: POST /auth/logout.

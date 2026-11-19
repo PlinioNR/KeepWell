@@ -15,7 +15,10 @@ if (host && !isIP(host)) {
 let server;
 try {
   await connectDatabase();
-  server = app.listen({ port, host }, () => {
+  server = app.listen({ port, host });
+  // O Express 5 também chama o callback de listen quando há erro.
+  // O evento listening só ocorre depois de a porta abrir com sucesso.
+  server.once('listening', () => {
     const { address } = server.address();
     console.log('API KeepWell a executar em ' + address + ' (porta ' + port + ').');
   });

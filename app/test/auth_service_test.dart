@@ -95,7 +95,8 @@ void main() {
               'id': '1',
               'name': 'Ana',
               'email': 'ana@mail.pt',
-              'role': 'user',
+              'houseId': 'casa-1',
+              'houseRole': 'owner',
             },
           }),
           200,
@@ -108,8 +109,40 @@ void main() {
 
     expect(Session.token, 'abc');
     expect(Session.user?.name, 'Ana');
-    expect(Session.user?.isAdmin, false);
+    expect(Session.user?.houseId, 'casa-1');
+    expect(Session.user?.canManage, true);
+    expect(Session.user?.isOwner, true);
   });
+
+  test(
+    'login: rejeita uma resposta antiga sem criar uma sessão parcial',
+    () async {
+      Session.clear();
+      final service = AuthService(
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'token': 'abc',
+              'user': {
+                'id': '1',
+                'name': 'Ana',
+                'email': 'ana@mail.pt',
+                'role': 'user',
+              },
+            }),
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          ),
+        ),
+      );
+      await expectLater(
+        service.login(email: 'ana@mail.pt', password: 'abc123'),
+        throwsA(isA<ApiException>()),
+      );
+      expect(Session.token, isNull);
+      expect(Session.user, isNull);
+    },
+  );
 
   test('login: palavra-passe errada mostra a mensagem da API', () async {
     Session.clear();

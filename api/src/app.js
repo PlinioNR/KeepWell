@@ -17,9 +17,12 @@ const app = express();
 
 app.use((req, res, next) => {
   res.vary('Origin');
-  if (req.get('Origin') !== 'http://localhost:8080') return next();
+  const origin = req.get('Origin');
+  // O Flutter escolhe uma porta livre quando --web-port não é indicado.
+  const localOrigin = /^http:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::\d{1,5})?$/;
+  if (!localOrigin.test(origin ?? '')) return next();
 
-  res.set('Access-Control-Allow-Origin', 'http://localhost:8080');
+  res.set('Access-Control-Allow-Origin', origin);
   if (req.method === 'OPTIONS' && req.get('Access-Control-Request-Method')) {
     res.set('Access-Control-Allow-Methods', 'GET, POST, PATCH, PUT, DELETE');
     res.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');

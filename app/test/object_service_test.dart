@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:keepwell/services/api_client.dart';
@@ -149,7 +150,7 @@ void main() {
       ),
     );
 
-    final object = await service.uploadPhoto('9', file.path);
+    final object = await service.uploadPhoto('9', XFile(file.path));
 
     expect(sentRequest.method, 'PUT');
     expect(sentRequest.url.path, '/objects/9/photo');
@@ -180,7 +181,7 @@ void main() {
         ),
       );
 
-      final result = await service.analyzePhoto(file.path);
+      final result = await service.analyzePhoto(XFile(file.path));
 
       expect(sentRequest.method, 'POST');
       expect(sentRequest.url.path, '/objects/photo-analysis');

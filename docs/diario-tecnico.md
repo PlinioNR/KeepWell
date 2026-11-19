@@ -167,3 +167,24 @@ Guardar comandos e caminhos úteis sem incluir palavras-passe, tokens ou chaves.
 - **Problema.** A primeira comparação também incluía referenceVersion, um contador interno que muda ao criar uma dica. A comparação seguinte encontrou instâncias ObjectId de bibliotecas BSON diferentes.
 - **Solução.** Comparar os valores em EJSON canónico, retirando da comparação os campos de pertença migrados e o contador técnico.
 - **Validação.** A comparação confirmou os campos originais dos objetos, cuidados e categorias. A verificação dos totais detetou o exemplo adicional do seed, que foi retirado.
+
+### O arranque falhou ao consultar o endereço de um servidor que não abriu a porta
+
+- **Problema.** Ao executar npm run dev, server.address() devolveu null e a desestruturação causou TypeError.
+- **Diagnóstico.** O Express 5 também executa o callback de listen quando ocorre um erro de abertura da porta. O código assumia que esse callback indicava sempre sucesso. Uma instância da API tinha sido deixada em execução após a migração.
+- **Solução.** Mostrar o endereço apenas no evento listening. O listener de error trata a falha e fecha a ligação ao MongoDB.
+- **Validação.** Um teste com uma porta temporária ocupada confirmou a mensagem de porta em uso e saída controlada com código 1, sem TypeError. A API na porta 3000 respondeu ao pedido de saúde.
+
+### O Chrome bloqueou o login quando o Flutter escolheu uma porta aleatória
+
+- **Problema.** A app mostrava “Não foi possível ligar ao servidor” apesar de a API e o MongoDB responderem.
+- **Diagnóstico.** O Flutter estava a correr com flutter run -d chrome, sem a porta fixa 8080. O CORS só permitia a origem http://localhost:8080, pelo que o navegador bloqueava o pedido da outra porta.
+- **Solução.** Permitir origens HTTP de localhost, 127.0.0.1 e [::1] nas portas locais escolhidas pelo Flutter. As origens externas continuam sem autorização CORS.
+- **Validação.** Os 30 testes locais passaram, incluindo preflight de login e leitura da resposta em portas locais diferentes e rejeição de origens externas. O login no ecrã precisa de ser repetido após atualizar a página.
+
+### O login ficou em carregamento após mudar para casas
+
+- **Problema.** O servidor respondeu ao login, mas o botão da app continuou a carregar.
+- **Diagnóstico.** O modelo User do Flutter ainda exigia o campo role, substituído na API por houseId e houseRole. A conversão do JSON lançava uma exceção de tipo. O ecrã tratava apenas ApiException e deixava o carregamento ativo.
+- **Solução.** Atualizar User para houseId e houseRole, com os getters canManage e isOwner. Validar toda a resposta antes de guardar o token e o utilizador. Converter respostas inválidas em ApiException e repor o botão no finally do ecrã de login.
+- **Validação.** Os oito testes do serviço de autenticação passaram. O novo caso confirma que uma resposta no formato antigo é rejeitada sem deixar uma sessão parcial. Depois de alinhar os testes de fotografia com XFile, flutter analyze terminou sem problemas e os 36 testes da app passaram. O Rafael confirmou que conseguiu iniciar sessão no Chrome depois de reiniciar a app com o código atualizado.
