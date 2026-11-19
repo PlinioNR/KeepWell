@@ -4,7 +4,7 @@ Estado: níveis 1 e 2 validados pelo Plinio (02/11/2026). Nível 3 completo prop
 Entrega: PDF "GP-2627-E2-G1.pdf" até 06/11/2026 23h59. O enunciado pede: lista de todas as tarefas e organização lógica das tarefas (sem dicionário da EDT).
 Legenda: ✅ concluído · ◐ iniciado · sem marca = planeado.
 
-Alteração de âmbito (17/11/2026, combinada com o professor): o administrador global sai e entram **casas** com convite por código e três papéis (dono, gestor, membro). Categorias fixas; dicas geridas por dono e gestor. Especificação em `docs/casas.md`. Itens afetados marcados com (casas).
+Alteração de âmbito (17/11/2026, combinada com o professor): o administrador global sai e entram **casas** com convite por código e três papéis (dono, gestor, membro). Categorias fixas; dicas geridas por dono e gestor. A 18/11: o membro gere objetos (cuidados e dicas só dono e gestor) e as dicas passam a ser de cada objeto. Especificação em `docs/casas.md`. Itens afetados marcados com (casas).
 
 ## 1. Gestão do projeto
 - 1.1 Termo de Abertura ✅
@@ -57,7 +57,7 @@ Alteração de âmbito (17/11/2026, combinada com o professor): o administrador 
   - 3.3.6 Publicação da biblioteca
 - 3.4 Protótipo interativo
   - 3.4.1 Ecrãs do utilizador comum ◐
-  - 3.4.2 Ecrãs da casa (membros, convite) e das dicas (casas; os ecrãs do administrador 15–17 saem)
+  - 3.4.2 Ecrãs da casa (membros, convite) e das dicas (casas; os ecrãs do administrador 15–17 saem) ◐ (modo claro feito a 18/11: 14 com "A minha casa", 15 em 5 versões, 08 com "Ver dicas", 18 Dicas do objeto (com versão do membro), 19 sem categoria, 16–17 no Archive; falta o modo escuro)
   - 3.4.3 Ajustes ao âmbito (arquivar Recuperar acesso) e ecrãs em falta
   - 3.4.4 Ligações, transições e overlays
   - 3.4.5 Handoff e revisão cruzada
@@ -80,17 +80,17 @@ Alteração de âmbito (17/11/2026, combinada com o professor): o administrador 
   - 4.2.2 Categoria
   - 4.2.3 Objeto
   - 4.2.4 Tarefa de manutenção
-  - 4.2.5 Dica (passa a pertencer a uma casa)
+  - 4.2.5 Dica (passa a pertencer a um objeto da casa)
   - 4.2.6 Casa (casas)
 - 4.3 Autenticação e permissões
   - 4.3.1 Registo e início de sessão
-  - 4.3.2 Proteção das rotas por papel na casa (dono/gestor/membro) (casas) ✅ (API testada)
+  - 4.3.2 Proteção das rotas por papel na casa (dono/gestor/membro) (casas) ◐ (base testada, falta permitir ao membro gerir objetos conforme decisão de 18/11)
 - 4.4 Endpoints da API
   - 4.4.1 Objetos (CRUD, pesquisa e filtro)
   - 4.4.2 Tarefas (CRUD, concluir e histórico)
   - 4.4.3 Repetição de tarefas
   - 4.4.4 Categorias (lista fixa, só consulta) (casas) ✅
-  - 4.4.5 Dicas (consulta; gestão por dono e gestor) (casas) ✅ (API testada)
+  - 4.4.5 Dicas (consulta; gestão por dono e gestor) (casas) ◐ (falta associar ao objeto e aceitar vídeo opcional conforme decisão de 18/11)
   - 4.4.6 Casa e convites (código, entrar, sair, papéis) (casas) ✅ (API testada)
   - 4.4.7 Migração dos dados existentes para casas (casas) ◐ (scripts testados, aplicação na base partilhada pendente)
 - 4.5 Fotografias
@@ -123,7 +123,7 @@ Alteração de âmbito (17/11/2026, combinada com o professor): o administrador 
   - 5.4.4 Lembretes (notificações locais) — a cortar se faltar tempo (casas)
   - 5.4.5 Repetição de tarefas — a cortar primeiro (casas)
 - 5.5 Dicas
-  - 5.5.1 Consulta de dicas por categoria
+  - 5.5.1 Consulta das dicas no Detalhe do objeto
 - 5.6 Perfil
   - 5.6.1 Definições e modo escuro
 - 5.7 Casa (casas; substitui a Administração)
