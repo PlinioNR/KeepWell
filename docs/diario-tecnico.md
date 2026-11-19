@@ -137,3 +137,17 @@ Guardar comandos e caminhos úteis sem incluir palavras-passe, tokens ou chaves.
 - **Diagnóstico.** A rota já permitia o pedido, mas o serviço ainda limitava a escrita transacional a owner e manager.
 - **Solução.** Atualizar também a revalidação do serviço para permitir os três papéis na gestão de objetos.
 - **Validação.** O teste de casas passou depois da correção, incluindo eliminar um objeto com dicas e bloquear a eliminação quando existem cuidados.
+
+### 19/11/2026 — objeto e cuidados de uma conta eliminada
+
+- **Problema.** A consulta anterior à migração encontrou o objeto “Portátil pessoal”, criado a 08/11/2026, com fotografia e dois cuidados. O userId aponta para uma conta que já não existe.
+- **Diagnóstico.** A comparação das referências com a coleção users confirmou um objeto e dois cuidados sem utilizador existente. Os cuidados continuam ligados ao objeto.
+- **Preparação.** O modo de consulta do script de migração passou a mostrar a contagem de objetos e cuidados sem utilizador. A aplicação da migração já recusa estas referências inválidas.
+- **Pendente.** Confirmar com o Rafael o destino desses registos antes da migração partilhada. A fotografia, o objeto e os cuidados ainda estão guardados.
+
+### Correção autorizada do portátil e dos dois cuidados antigos
+
+- **Autorização.** O Rafael confirmou a associação à conta atual rafael@keepwell.test.
+- **Solução.** Atualizar o userId do objeto “Portátil pessoal” e dos seus dois cuidados na mesma transação, depois de confirmar que a conta antiga já não existia.
+- **Validação.** A comparação dos documentos antes e depois confirmou que apenas a referência ao utilizador mudou. O campo da fotografia, as datas e as observações foram preservados. A consulta de pré-migração encontrou zero objetos e zero cuidados sem utilizador.
+- **Pendente.** Aplicar a migração para casas na base partilhada no momento combinado com a equipa.

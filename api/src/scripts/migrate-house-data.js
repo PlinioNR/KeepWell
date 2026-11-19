@@ -22,6 +22,17 @@ try {
   ]);
   console.log(`Sem casa: ${objectCount} objetos, ${taskCount} cuidados. Dicas antigas sem objeto a eliminar: ${tipCount}.`);
 
+  // O modo de consulta também mostra referências para contas eliminadas.
+  for (const name of ['objects', 'tasks']) {
+    const missingOwners = await database.collection(name).aggregate([
+      { $match: withoutHouse },
+      { $lookup: { from: 'users', localField: 'userId', foreignField: '_id', as: 'owner' } },
+      { $match: { 'owner.0': { $exists: false } } },
+      { $count: 'total' }
+    ]).toArray();
+    console.log('Registos em ' + name + ' sem utilizador existente: ' + (missingOwners[0]?.total ?? 0) + '.');
+  }
+
   if (apply) {
     if (await users.countDocuments(withoutHouse)) {
       throw new Error('Executa primeiro migrate:house-memberships -- --apply.');
