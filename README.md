@@ -54,12 +54,12 @@ Adultos entre os 20 e os 45 anos que vivem de forma independente (estudantes des
 |---|---|
 | **Conta** | Criar conta, entrar e terminar sessão. O registo cria automaticamente a casa inicial. |
 | **Casa** | Consultar membros e papéis, convidar por código, entrar noutra casa e gerir membros conforme o papel. Cada pessoa pertence a uma casa de cada vez. |
-| **Objetos** | Registar uma fotografia, pesquisar por nome e filtrar por categoria. A edição e a eliminação dependem do papel na casa. |
+| **Objetos** | Registar uma fotografia, pesquisar por nome e filtrar por categoria. Todos os membros da casa podem criar, editar e eliminar objetos. |
 | **Análise de fotografias** | O Gemini sugere o nome e a categoria no formulário. A API também devolve sugestões de cuidados. |
 | **Cuidados** | Planear um cuidado para um objeto, definir a data e marcá-lo como concluído. |
 | **Histórico** | Consultar o evento de criação do objeto e os cuidados concluídos, com a data e as observações da conclusão. |
 | **Categorias** | Consultar um catálogo fixo partilhado por todas as casas. |
-| **Dicas** | Consultar dicas de conservação da casa por categoria. Dono e gestor podem geri-las. |
+| **Dicas** | Consultar dicas de cada objeto, com link opcional para vídeo ou tutorial. Dono e gestor podem geri-las. |
 | **Perfil** | Definições da conta e modo escuro. |
 
 Lembretes locais e repetição de cuidados ficam fora da prioridade da app nesta fase.
@@ -70,7 +70,7 @@ Lembretes locais e repetição de cuidados ficam fora da prioridade da app nesta
 |---|---|
 | **Dono** | Consulta e gere os dados da casa, renomeia a casa, gera convites, muda papéis e remove membros. |
 | **Gestor** | Consulta e gere objetos, cuidados e dicas. Pode renomear a casa, gerar convites e sair da casa. |
-| **Membro** | Consulta objetos, fotos, cuidados, histórico, dicas e membros. Pode adicionar objetos e enviar a fotografia de um objeto que criou. Pode sair da casa. |
+| **Membro** | Consulta objetos, fotos, cuidados, histórico, dicas e membros. Pode adicionar, editar e eliminar objetos e gerir as suas fotografias. Pode sair da casa. |
 
 Cada conta começa como dona da sua casa. Para aceitar um convite, a casa atual deve ter apenas essa pessoa, sem objetos nem dicas. O código tem oito caracteres, dura sete dias e permite a entrada como membro. A API vai verificar o papel em cada operação protegida. As regras completas estão na [especificação de casas](docs/casas.md).
 
@@ -238,7 +238,7 @@ O código é escrito por dois estudantes a aprender Flutter, por isso segue regr
 | Análise de fotografias | Preenchimento de nome e categoria testado no Chrome. As sugestões de cuidados estão disponíveis na API. |
 | Casas e papéis | Registo transacional, convites e gestão de membros implementados e testados em bases temporárias do Atlas. Integração dos ecrãs da casa pendente. |
 | Migração dos dados | Scripts para associar contas, objetos, cuidados e dicas a casas preparados. Scripts validados numa base temporária do Atlas. Falta aplicar a migração na base partilhada. |
-| Permissões, categorias e dicas | Objetos, fotos, histórico, cuidados, notificações e dicas usam a casa. Categorias só de consulta. Dono, gestor e membro testados na API. |
+| Permissões, categorias e dicas | Objetos, fotos, histórico, cuidados, notificações e dicas usam a casa. O membro gere objetos e fotos. Dicas por objeto com vídeo opcional. Categorias só de consulta. |
 
 Os comandos da API estão no [README da API](api/README.md). Os problemas e testes estão no [diário técnico](docs/diario-tecnico.md). O planeamento completo está no [EDT](EDT.md).
 

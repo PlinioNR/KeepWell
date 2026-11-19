@@ -24,7 +24,7 @@ A app Web usa `http://localhost:3000` e a API permite pedidos da origem
 O backend usa houseId e houseRole (owner, manager, member). A app deve consultar
 /auth/me depois de entrar, sair ou mudar de casa, e atualizar os dados apresentados.
 Os ecrãs de gestão de categorias deram lugar à casa e às dicas. Apenas owner e
-manager gerem cuidados e dicas. O membro pode criar objetos e enviar a primeira
-foto dos objetos que criou. O contrato está no [README da API](../api/README.md).
+manager gerem cuidados e dicas. O membro pode criar, editar e eliminar os objetos da casa e gerir as fotos.
+As dicas usam objectId em vez de categoryId e aceitam videoUrl opcional. O contrato está no [README da API](../api/README.md).
 
 A integração dos ecrãs com estas permissões ainda está pendente.

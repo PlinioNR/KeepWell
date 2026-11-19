@@ -18,19 +18,14 @@ try {
   const [objectCount, taskCount, tipCount] = await Promise.all([
     objects.countDocuments(withoutHouse),
     tasks.countDocuments(withoutHouse),
-    tips.countDocuments(withoutHouse)
+    tips.countDocuments({ objectId: { $not: { $type: 'objectId' } } })
   ]);
-  console.log(`Sem casa: ${objectCount} objetos, ${taskCount} cuidados, ${tipCount} dicas.`);
+  console.log(`Sem casa: ${objectCount} objetos, ${taskCount} cuidados. Dicas antigas sem objeto a eliminar: ${tipCount}.`);
 
   if (apply) {
     if (await users.countDocuments(withoutHouse)) {
       throw new Error('Executa primeiro migrate:house-memberships -- --apply.');
     }
-    const ana = tipCount ? await users.findOne({ email: 'ana@keepwell.test' }) : null;
-    if (tipCount && !ana?.houseId) {
-      throw new Error('A conta da Ana precisa de uma casa para receber as dicas existentes.');
-    }
-
     // Verifica se há referências antigas sem utilizador antes de fazer escritas.
     for (const collection of [objects, tasks]) {
       const ownerIds = await collection.distinct('userId', withoutHouse);
@@ -64,7 +59,7 @@ try {
       await withDatabaseTransaction(async (db, session) => {
         const filter = { ...withoutHouse, userId: user._id };
         await db.collection('objects').updateMany(filter, {
-          $set: { houseId: user.houseId, createdBy: user._id }, $unset: { userId: '' }
+          $set: { houseId: user.houseId }, $unset: { userId: '', createdBy: '' }
         }, { session });
         await db.collection('tasks').updateMany(filter, {
           $set: { houseId: user.houseId }, $unset: { userId: '' }
@@ -72,7 +67,8 @@ try {
       });
     }
 
-    if (ana) await tips.updateMany(withoutHouse, { $set: { houseId: ana.houseId } });
+    // As dicas antigas por categoria não têm objeto de destino definido.
+    await tips.deleteMany({ objectId: { $not: { $type: 'objectId' } } });
     if (await objects.countDocuments(withoutHouse) ||
         await tasks.countDocuments(withoutHouse) ||
         await tips.countDocuments(withoutHouse)) {
@@ -108,8 +104,9 @@ try {
         });
       }
     }
+    await tips.updateMany({ houseId: { $type: 'objectId' }, objectId: { $type: 'objectId' } }, { $unset: { categoryId: '' } });
     await users.updateMany({ houseId: { $type: 'objectId' } }, { $unset: { role: '' } });
-    await objects.updateMany({ houseId: { $type: 'objectId' }, createdBy: { $type: 'objectId' } }, { $unset: { userId: '' } });
+    await objects.updateMany({ houseId: { $type: 'objectId' } }, { $unset: { userId: '', createdBy: '' } });
     await tasks.updateMany({ houseId: { $type: 'objectId' } }, { $unset: { userId: '' } });
     console.log('Objetos, cuidados e dicas associados às casas.');
   }

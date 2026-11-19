@@ -7,7 +7,7 @@ import { buildObject, parseObjectId, toPublicObject } from '../models/object.js'
 
 export async function createObject(body, userId, houseId, actor) {
   const object = buildObject(body, userId);
-  if (houseId) { Object.assign(object, { houseId, createdBy: userId }); delete object.userId; }
+  if (houseId) { Object.assign(object, { houseId }); delete object.userId; }
   return withDatabaseTransaction(async (database, session) => {
     if (actor) await lockHouseActor(database, session, actor);
     // Escrita comum à criação e eliminação da categoria: evita referências órfãs.
@@ -110,7 +110,7 @@ export async function getObject(id, scope) {
 export async function updateObject(id, body, scope, actor) {
   const _id = parseObjectId(id);
   return withDatabaseTransaction(async (database, session) => {
-    if (actor) await lockHouseActor(database, session, actor, ['owner', 'manager']);
+    if (actor) await lockHouseActor(database, session, actor);
     const objects = database.collection('objects');
     const current = await objects.findOne({ _id, ...scope }, { session });
     if (!current) throw Object.assign(new Error('Objeto não encontrado.'), { status: 404 });
@@ -124,7 +124,7 @@ export async function updateObject(id, body, scope, actor) {
       categoryId: Object.hasOwn(body, 'categoryId') ? body.categoryId : current.categoryId.toString(),
       acquiredOn: Object.hasOwn(body, 'acquiredOn') ? body.acquiredOn : current.acquiredOn,
       description: Object.hasOwn(body, 'description') ? body.description : current.description
-    }, current.createdBy ?? current.userId);
+    }, actor?._id ?? current.createdBy ?? current.userId);
     if (!validated.categoryId.equals(current.categoryId)) {
       // Usa o mesmo protocolo da criação para coordenar com deleteCategory.
       const category = await database.collection('categories').findOneAndUpdate(
@@ -146,7 +146,7 @@ export async function updateObject(id, body, scope, actor) {
 export async function deleteObject(id, scope, actor) {
   const _id = parseObjectId(id);
   const photoKey = await withDatabaseTransaction(async (database, session) => {
-    if (actor) await lockHouseActor(database, session, actor, ['owner', 'manager']);
+    if (actor) await lockHouseActor(database, session, actor);
     // Escrita no objeto para coordenar com futuras criações de tarefas.
     const object = await database.collection('objects').findOneAndUpdate(
       { _id, ...scope }, { $inc: { referenceVersion: 1 } },
@@ -157,6 +157,7 @@ export async function deleteObject(id, scope, actor) {
     if (task) {
       throw Object.assign(new Error('O objeto tem tarefas associadas e não pode ser eliminado.'), { status: 409 });
     }
+    await database.collection('tips').deleteMany({ objectId: _id, ...scope }, { session });
     await database.collection('objects').deleteOne({ _id, ...scope }, { session });
     return object.photoKey;
   });

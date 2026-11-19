@@ -94,13 +94,13 @@ try {
   const finalKey = (await database.collection('objects').findOne({ _id })).photoKey;
   assert.ok((await readPhotoFile(finalKey)).length > 0);
   for (const key of keys) if (key !== finalKey) await assert.rejects(readPhotoFile(key), { status: 404 });
-  // O membro consulta a foto da casa, mas só envia a primeira foto de um objeto seu.
+  // O membro gere todos os objetos e fotografias da sua casa.
   assert.equal((await fetch(base + '/photo', { headers: headers(2) })).status, 200);
   assert.equal((await fetch(base + '/history', { headers: headers(2) })).status, 200);
   assert.equal((await fetch(base + '/history', { headers: headers(1) })).status, 404);
-  assert.equal((await upload(form(), 2)).status, 403);
-  assert.equal((await fetch(base + '/photo', { method: 'DELETE', headers: headers(2) })).status, 403);
-  assert.equal((await fetch(base, { method: 'DELETE', headers: headers(2) })).status, 403);
+  assert.equal((await upload(form(), 2)).status, 200);
+  assert.equal((await fetch(base + '/photo', { method: 'DELETE', headers: headers(2) })).status, 204);
+  assert.equal((await upload(form(), 2)).status, 200);
   const objectsUrl = base.slice(0, base.lastIndexOf('/'));
   const created = await fetch(objectsUrl, {
     method: 'POST', headers: { ...headers(2), 'Content-Type': 'application/json' },
@@ -113,11 +113,11 @@ try {
   assert.equal((await fetch(memberUrl, { headers: headers(1) })).status, 404);
   const sendMemberPhoto = () => fetch(memberUrl + '/photo', { method: 'PUT', headers: headers(2), body: form() });
   assert.equal((await sendMemberPhoto()).status, 200);
-  assert.equal((await sendMemberPhoto()).status, 403);
+  assert.equal((await sendMemberPhoto()).status, 200);
   assert.equal((await fetch(memberUrl, {
     method: 'PATCH', headers: { ...headers(2), 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: 'Mudança do membro' })
-  })).status, 403);
+  })).status, 200);
 
   const task = await database.collection('tasks').insertOne(buildTask({ objectId: object.id, title: 'Cuidado temporário', dueOn: '2026-11-08' }, userIds[0]));
   try {

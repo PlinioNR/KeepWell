@@ -101,8 +101,7 @@ try {
   assert.equal((await request(outsider, 'GET', '/objects')).total, 0);
   await request(outsider, 'GET', objectPath, undefined, 404);
   await request(outsider, 'GET', objectPath + '/history', undefined, 404);
-  await request(member, 'PATCH', objectPath, { name: 'Outro' }, 403);
-  await request(member, 'DELETE', objectPath, undefined, 403);
+  await request(member, 'PATCH', objectPath, { description: 'Descrição do membro' });
   await request(manager, 'PATCH', objectPath, { description: 'Computador da casa' });
 
   const image = await sharp({ create: { width: 10, height: 10, channels: 3, background: '#ffffff' } }).png().toBuffer();
@@ -115,11 +114,12 @@ try {
     assert.equal(response.status, expected);
   }
   await upload(member, 200);
-  await upload(member, 403);
+  await upload(member, 200);
   await upload(manager, 200);
   assert.equal((await fetch(base + objectPath + '/photo', { headers: { Authorization: 'Bearer ' + owner.token } })).status, 200);
   await request(outsider, 'GET', objectPath + '/photo', undefined, 404);
-  await request(member, 'DELETE', objectPath + '/photo', undefined, 403);
+  await request(member, 'DELETE', objectPath + '/photo', undefined, 204);
+  await upload(member, 200);
 
   const taskBody = {
     objectId: object.id, title: 'Limpar o teclado', description: 'Usar um pano seco.',
@@ -154,7 +154,7 @@ try {
   assert.ok(notifications.recent.some(item => item.taskId === task.id));
   assert.equal((await request(outsider, 'GET', '/notifications')).recent.length, 0);
 
-  const tipBody = { title: 'Limpeza', text: 'Desligar o equipamento antes da limpeza.', categoryId: category };
+  const tipBody = { title: 'Limpeza', text: 'Desligar o equipamento antes da limpeza.', objectId: object.id };
   await request(member, 'POST', '/tips', tipBody, 403);
   const { tip } = await request(manager, 'POST', '/tips', tipBody, 201);
   assert.equal((await request(member, 'GET', '/tips')).total, 1);
@@ -163,7 +163,46 @@ try {
   await request(member, 'PATCH', '/tips/' + tip.id, { text: 'Outro' }, 403);
   await request(owner, 'PATCH', '/tips/' + tip.id, { text: 'Usar um pano macio.' });
   await request(member, 'DELETE', '/tips/' + tip.id, undefined, 403);
+  const video = await request(owner, 'PATCH', '/tips/' + tip.id, { videoUrl: 'https://example.com/tutorial' });
+  assert.equal(video.tip.videoUrl, 'https://example.com/tutorial');
+  const unchanged = await request(owner, 'PATCH', '/tips/' + tip.id, { title: 'Título revisto' });
+  assert.equal(unchanged.tip.videoUrl, video.tip.videoUrl);
+  for (const videoUrl of ['javascript:alert(1)', 'ftp://example.com/video', 'https://', 42, {}, 'https://example.com/' + 'x'.repeat(2048)]) {
+    await request(owner, 'PATCH', '/tips/' + tip.id, { videoUrl }, 400);
+  }
+  const cleared = await request(owner, 'PATCH', '/tips/' + tip.id, { videoUrl: '' });
+  assert.equal(cleared.tip.videoUrl, null);
+  const filtered = await request(member, 'GET', '/tips?objectId=' + object.id);
+  assert.equal(filtered.total, 1);
+  assert.equal(filtered.tips[0].objectId, object.id);
+  await request(outsider, 'GET', '/tips?objectId=' + object.id, undefined, 404);
+  await request(outsider, 'POST', '/tips', tipBody, 404);
+  await request(owner, 'GET', '/tips?categoryId=' + category, undefined, 400);
+  await request(owner, 'POST', '/tips', { title: 'Antiga', text: 'Texto', categoryId: category }, 400);
+  const { object: disposable } = await request(member, 'POST', '/objects', { name: 'Objeto temporário', categoryId: category }, 201);
+  const disposableTip = await request(owner, 'POST', '/tips', { ...tipBody, objectId: disposable.id }, 201);
+  await request(member, 'DELETE', '/objects/' + disposable.id, undefined, 204);
+  await request(owner, 'GET', '/tips/' + disposableTip.tip.id, undefined, 404);
+  assert.equal(await database.collection('tips').countDocuments({ objectId: new ObjectId(disposable.id) }), 0);
+  // O bloqueio por cuidados também se aplica ao membro e conserva as dicas.
+  await request(member, 'DELETE', objectPath, undefined, 409);
+  await request(owner, 'GET', '/tips/' + tip.id);
   await request(owner, 'DELETE', '/tips/' + tip.id, undefined, 204);
+
+  const { object: racingTipObject } = await request(owner, 'POST', '/objects', {
+    name: 'Objeto para testar dicas', categoryId: category
+  }, 201);
+  const racingTip = await Promise.all([
+    fetch(base + '/tips', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + owner.token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...tipBody, objectId: racingTipObject.id })
+    }),
+    request(member, 'DELETE', '/objects/' + racingTipObject.id, undefined, 204)
+  ]);
+  assert.ok([201, 404].includes(racingTip[0].status));
+  assert.equal(await database.collection('tips').countDocuments({
+    objectId: new ObjectId(racingTipObject.id)
+  }), 0);
 
   const outsiderInvite = await request(outsider, 'POST', '/house/invite');
   await request(owner, 'POST', '/house/join', { code: outsiderInvite.code }, 409);

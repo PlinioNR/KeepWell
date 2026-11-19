@@ -124,3 +124,16 @@ Guardar comandos e caminhos úteis sem incluir palavras-passe, tokens ou chaves.
 - **Problema.** As verificações antigas usavam userId para procurar e limpar dados e chamavam as rotas de gestão global de categorias.
 - **Solução.** Adaptar as verificações de objetos, fotos e cuidados a houseId e aos papéis da casa. O teste antigo de administração de categorias foi substituído pela verificação de categorias só de leitura no teste de casas.
 - **Validação.** As verificações de regressão passaram numa base temporária. O comando test:backend executa testes locais, regras de casas e migração em bases isoladas.
+
+### 19/11/2026 — regras novas após sincronização do repositório
+
+- **Alteração de âmbito.** O membro passou a gerir todos os objetos e fotografias da casa. Cada dica passou a pertencer a um objeto e pode ter um link de vídeo ou tutorial.
+- **Implementação.** As dicas usam objectId e videoUrl, com validação de HTTP/HTTPS. O objectId tem de apontar para um objeto da mesma casa. A eliminação de um objeto sem cuidados apaga as suas dicas na mesma transação. O bloqueio por cuidados associados conserva o objeto e as dicas.
+- **Migração preparada.** As dicas antigas sem objeto são contadas no modo de consulta e eliminadas apenas com --apply, conforme a especificação atualizada. O seed cria novas dicas nos objetos de demonstração. Os campos antigos createdBy dos objetos e categoryId das dicas por objeto são removidos na migração. A base partilhada continua por migrar.
+
+### A eliminação de objetos ainda recusava o membro após atualizar a rota
+
+- **Problema.** O teste da nova regra recebeu 403 quando o membro tentou eliminar um objeto sem cuidados.
+- **Diagnóstico.** A rota já permitia o pedido, mas o serviço ainda limitava a escrita transacional a owner e manager.
+- **Solução.** Atualizar também a revalidação do serviço para permitir os três papéis na gestão de objetos.
+- **Validação.** O teste de casas passou depois da correção, incluindo eliminar um objeto com dicas e bloquear a eliminação quando existem cuidados.

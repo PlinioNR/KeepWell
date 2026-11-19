@@ -43,7 +43,7 @@ try {
   assert.equal(object.acquiredOn, '2023-07-03');
   assert.equal(object.description, 'Computador pessoal.');
   const saved = await database.collection('objects').findOne({ _id: new ObjectId(object.id) });
-  assert.ok(saved.createdBy.equals(userIds[0]));
+  assert.ok(saved.houseId.equals(houseIds[0]));
   assert.equal(saved.description, 'Computador pessoal.');
   assert.ok(saved.categoryId.equals(categoryIds[0]));
   response = await request(0, 'GET');

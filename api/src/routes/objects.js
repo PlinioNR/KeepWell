@@ -4,8 +4,6 @@ import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { requirePhotoUploadAccess, saveObjectPhoto, getObjectPhoto, deleteObjectPhoto } from '../services/object-photos.js';
 import { receivePhoto, limitPhotoConcurrency } from '../middleware/receive-photo.js';
-import { parseObjectId } from '../models/object.js';
-import { getDatabase } from '../database.js';
 import { requireHouse } from '../middleware/require-house.js';
 import { requireAuth } from '../middleware/require-auth.js';
 import { createObject, listObjects, getObject, updateObject, deleteObject } from '../services/objects.js';
@@ -18,15 +16,6 @@ router.use((req, _res, next) => {
   next();
 });
 
-async function requireObjectManager(req, res, next) {
-  if (['owner', 'manager'].includes(req.auth.user.houseRole)) return next();
-  const exists = await getDatabase().collection('objects').findOne(
-    { _id: parseObjectId(req.params.id), ...req.objectScope }, { projection: { _id: 1 } }
-  );
-  if (!exists) return res.status(404).json({ error: 'Objeto não encontrado.' });
-  return res.status(403).json({ error: 'Não tens permissão para esta ação.' });
-}
-
 router.post('/', async (req, res) => {
   if (!req.is('application/json')) return res.status(415).json({ error: 'Usa Content-Type: application/json.' });
   const object = await createObject(req.body, req.auth.user._id, req.auth.user.houseId, req.auth.user);
@@ -38,12 +27,12 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   res.status(200).json({ object: await getObject(req.params.id, req.objectScope) });
 });
-router.patch('/:id', requireObjectManager, async (req, res) => {
+router.patch('/:id', async (req, res) => {
   if (!req.is('application/json')) return res.status(415).json({ error: 'Usa Content-Type: application/json.' });
   const object = await updateObject(req.params.id, req.body, req.objectScope, req.auth.user);
   res.status(200).json({ object });
 });
-router.delete('/:id', requireObjectManager, async (req, res) => {
+router.delete('/:id', async (req, res) => {
   await deleteObject(req.params.id, req.objectScope, req.auth.user);
   res.status(204).end();
 });
@@ -74,7 +63,7 @@ router.get('/:id/photo', async (req, res) => {
   res.set('X-Content-Type-Options', 'nosniff');
   res.type('image/jpeg').status(200).send(image);
 });
-router.delete('/:id/photo', requireObjectManager, async (req, res) => {
+router.delete('/:id/photo', async (req, res) => {
   await deleteObjectPhoto(req.params.id, req.objectScope, req.auth.user);
   res.status(204).end();
 });

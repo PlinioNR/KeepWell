@@ -120,15 +120,15 @@ try {
   }
 
   const tips = [
-    ['Eletrodomésticos', 'Descalcificar a máquina de café', 'Segue as instruções do fabricante e enxagua o depósito depois do ciclo.'],
-    ['Veículos', 'Cuidar da corrente da bicicleta', 'Limpa a corrente antes de lubrificar e retira o excesso com um pano.'],
-    ['Eletrónica', 'Limpar as entradas de ventilação', 'Desliga o portátil e remove o pó exterior com um pincel macio.'],
-    ['Mobiliário', 'Aspirar um sofá de tecido', 'Usa um acessório macio e verifica as instruções de limpeza na etiqueta.']
+    ['Máquina de café', 'Descalcificar a máquina de café', 'Segue as instruções do fabricante e enxagua o depósito depois do ciclo.'],
+    ['Bicicleta urbana', 'Cuidar da corrente da bicicleta', 'Limpa a corrente antes de lubrificar e retira o excesso com um pano.'],
+    ['Portátil', 'Limpar as entradas de ventilação', 'Desliga o portátil e remove o pó exterior com um pincel macio.'],
+    ['Sofá da sala', 'Aspirar um sofá de tecido', 'Usa um acessório macio e verifica as instruções de limpeza na etiqueta.']
   ];
-  for (const [category, title, text] of tips) {
-    const categoryId = categoryIds[category];
-    const existing = await database.collection('tips').findOne({ houseId: ana.houseId, categoryId: new ObjectId(categoryId), title });
-    if (!existing) await createTip({ categoryId, title, text }, ana);
+  for (const [name, title, text] of tips) {
+    const objectId = objectIds.get('ana@keepwell.test:' + name);
+    const existing = await database.collection('tips').findOne({ houseId: ana.houseId, objectId: new ObjectId(objectId), title });
+    if (!existing) await createTip({ objectId, title, text }, ana);
   }
 
   console.log('Objetos, cuidados e dicas de demonstração prontos.');

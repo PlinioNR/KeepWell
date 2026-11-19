@@ -1,7 +1,7 @@
 # Casas, convites e papéis — especificação
 
 Decidido a 17/11/2026, depois de falarmos com o professor. Substitui o administrador global.
-Estado em 19/11/2026 — base do backend de casas implementada e validada em bases temporárias do Atlas. Falta adaptar o código às decisões de 18/11 sobre gestão de objetos pelo membro e dicas por objeto com vídeo opcional. A migração da base partilhada e a integração dos ecrãs da casa estão pendentes.
+Estado em 19/11/2026 — base do backend de casas implementada e validada em bases temporárias do Atlas. O backend já segue as decisões de 18/11 sobre gestão de objetos pelo membro e dicas por objeto com vídeo opcional. A migração da base partilhada e a integração dos ecrãs da casa estão pendentes.
 
 Os comandos atuais e o contrato das rotas estão no [README da API](../api/README.md).
 

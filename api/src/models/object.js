@@ -57,7 +57,7 @@ export async function setupObjects(database) {
   const validator = {
     $jsonSchema: {
       bsonType: 'object', additionalProperties: false,
-      anyOf: [{ required: ['userId'] }, { required: ['houseId', 'createdBy'] }],
+      anyOf: [{ required: ['userId'] }, { required: ['houseId'] }],
       required: ['name', 'categoryId', 'createdAt', 'updatedAt'],
       properties: {
         _id: { bsonType: 'objectId' },

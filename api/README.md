@@ -92,15 +92,15 @@ coordenar alterações simultâneas de membros e dados.
 | POST /objects | Todos na casa. name e categoryId obrigatórios, acquiredOn e description opcionais. |
 | GET /objects | Todos. page, pageSize, search e categoryId. |
 | GET /objects/:id | Todos. |
-| PATCH /objects/:id | Dono e gestor. name, categoryId, acquiredOn e description. |
-| DELETE /objects/:id | Dono e gestor. 409 se houver cuidados associados. |
-| PUT /objects/:id/photo | Dono e gestor. Membro pode enviar a primeira foto de um objeto que criou. |
+| PATCH /objects/:id | Todos na casa. name, categoryId, acquiredOn e description. |
+| DELETE /objects/:id | Todos na casa. 409 se houver cuidados associados. |
+| PUT /objects/:id/photo | Todos na casa podem enviar e substituir a foto. |
 | GET /objects/:id/photo | Todos na casa. |
-| DELETE /objects/:id/photo | Dono e gestor. |
+| DELETE /objects/:id/photo | Todos na casa. |
 | GET /objects/:id/history | Todos na casa. page e pageSize. |
 
-Os objetos guardam houseId e createdBy. O cliente não escolhe a casa nem
-o autor. description é opcional até 1000 caracteres. acquiredOn usa
+Os objetos guardam houseId. O cliente não escolhe a casa. Ao eliminar um
+objeto sem cuidados, a API elimina as dicas desse objeto na mesma transação. description é opcional até 1000 caracteres. acquiredOn usa
 AAAA-MM-DD ou null. A pesquisa é literal, ignora maiúsculas e distingue
 acentos. A listagem e o detalhe incluem nextCare, com o próximo cuidado,
 ou null. A paginação usa page 1 e pageSize 20, com máximo 100.
@@ -162,14 +162,21 @@ de categorias foram retiradas.
 | GET /categories | Todos autenticados. Aceita search. |
 | GET /categories/icons | Todos autenticados. Catálogo de ícones. |
 | GET /categories/:id | Todos autenticados. |
-| GET /tips | Todos na casa. Aceita categoryId, search, page e pageSize. |
+| GET /tips | Todos na casa. Aceita objectId, search, page e pageSize. |
 | GET /tips/:id | Todos na casa. |
-| POST /tips | Dono e gestor enviam title, text e categoryId. |
-| PATCH /tips/:id | Dono e gestor alteram title, text e/ou categoryId. |
+| POST /tips | Dono e gestor enviam title, text, objectId e videoUrl opcional. |
+| PATCH /tips/:id | Dono e gestor alteram title, text, objectId e/ou videoUrl. |
 | DELETE /tips/:id | Dono e gestor eliminam a dica. |
 
 title tem 2 a 120 caracteres e text tem 1 a 3000. As dicas são isoladas por
-houseId. A pesquisa procura no título e o filtro usa a categoria do catálogo.
+houseId e pertencem a um objeto existente da casa. A pesquisa procura no
+título e objectId filtra o objeto. Uma referência a um objeto de outra casa
+devolve 404. O campo categoryId deixou de ser aceite.
+
+videoUrl é opcional, devolve null por defeito e aceita um endereço HTTP ou
+HTTPS com até 2048 caracteres. Envia null ou uma string vazia para limpar.
+A edição de outros campos preserva o vídeo existente. A API guarda o link
+para o Flutter o abrir no navegador.
 
 ## Análise de fotografias
 
@@ -241,8 +248,10 @@ npm.cmd run dev
 
 Os comandos sem --apply só consultam contagens. A primeira migração cria
 a casa de cada conta antiga. A segunda associa objetos, cuidados e dicas,
-preserva os IDs, fotografias e datas e remove os campos antigos role e userId.
-As dicas globais passam para a casa da Ana. As contas de demonstração Bruno
+preserva os IDs dos objetos e cuidados, as fotografias e as datas e remove os
+campos antigos role, userId e createdBy. As dicas antigas sem objeto são
+apagadas, conforme a decisão de 18/11. O comando sem --apply mostra quantas
+serão eliminadas. O seed cria novas dicas nos objetos de demonstração. As contas de demonstração Bruno
 e gestor ficam nessa casa com os papéis member e manager. A conta antiga
 admin@keepwell.test passa a gestor@keepwell.test. Se já existirem as duas
 contas, o script pede a resolução dessa duplicação.

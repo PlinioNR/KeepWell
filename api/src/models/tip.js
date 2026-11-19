@@ -2,11 +2,15 @@ export async function setupTips(database) {
   const validator = {
     $jsonSchema: {
       bsonType: 'object', additionalProperties: false,
-      required: ['categoryId', 'title', 'text', 'createdAt', 'updatedAt'],
+      // A categoria antiga só é aceite durante a migração dos dados existentes.
+      anyOf: [{ required: ['categoryId'] }, { required: ['houseId', 'objectId'] }],
+      required: ['title', 'text', 'createdAt', 'updatedAt'],
       properties: {
         _id: { bsonType: 'objectId' },
         categoryId: { bsonType: 'objectId' },
         houseId: { bsonType: 'objectId' },
+        objectId: { bsonType: 'objectId' },
+        videoUrl: { bsonType: ['string', 'null'], maxLength: 2048, pattern: '^https?://' },
         title: { bsonType: 'string', minLength: 2, maxLength: 120 },
         text: { bsonType: 'string', minLength: 1, maxLength: 3000 },
         createdAt: { bsonType: 'date' },
@@ -19,10 +23,14 @@ export async function setupTips(database) {
   } else {
     await database.createCollection('tips', { validator });
   }
-  await database.collection('tips').createIndex({ houseId: 1, categoryId: 1, title: 1 }, { name: 'tips_house_category' });
-  await database.collection('tips').createIndex({ categoryId: 1, title: 1, _id: 1 });
+  await database.collection('tips').createIndex(
+    { houseId: 1, objectId: 1, title: 1, _id: 1 }, { name: 'tips_house_object' }
+  );
 }
 
-export function toPublicTip({ _id, categoryId, title, text, createdAt, updatedAt }) {
-  return { id: _id.toString(), categoryId: categoryId.toString(), title, text, createdAt, updatedAt };
+export function toPublicTip({ _id, objectId, title, text, videoUrl, createdAt, updatedAt }) {
+  return {
+    id: _id.toString(), objectId: objectId.toString(), title, text,
+    videoUrl: videoUrl ?? null, createdAt, updatedAt
+  };
 }

@@ -57,8 +57,9 @@ try {
   const object = await database.collection('objects').findOne({ _id: objectId });
   const task = await database.collection('tasks').findOne({ _id: taskId });
   const tip = await database.collection('tips').findOne({ _id: tipId });
-  for (const item of [object, task, tip]) assert.ok(item.houseId.equals(owner.houseId));
-  assert.ok(object.createdBy.equals(ids.bruno));
+  assert.equal(tip, null);
+  for (const item of [object, task]) assert.ok(item.houseId.equals(owner.houseId));
+  assert.ok(!('createdBy' in object));
   assert.ok(task.objectId.equals(objectId));
   assert.equal(task.notes, 'Observação preservada.');
   assert.equal(task.completedAt.getTime(), now.getTime());
@@ -68,6 +69,12 @@ try {
   run('migrate-house-data', '--apply');
   assert.equal(await database.collection('houses').countDocuments(), 1);
   run('seed-demo');
+  const newTips = await database.collection('tips').find().sort({ _id: 1 }).toArray();
+  assert.ok(newTips.length > 0);
+  assert.ok(newTips.every(tip => tip.objectId && !('categoryId' in tip)));
+  run('migrate-house-data', '--apply');
+  const preservedTips = await database.collection('tips').find().sort({ _id: 1 }).toArray();
+  assert.deepEqual(preservedTips, newTips);
   const before = await Promise.all(['users', 'houses', 'objects', 'tasks', 'tips'].map(c => database.collection(c).countDocuments()));
   run('seed-demo');
   const after = await Promise.all(['users', 'houses', 'objects', 'tasks', 'tips'].map(c => database.collection(c).countDocuments()));

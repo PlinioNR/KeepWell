@@ -84,13 +84,13 @@ Alteração de âmbito (17/11/2026, combinada com o professor): o administrador 
   - 4.2.6 Casa (casas)
 - 4.3 Autenticação e permissões
   - 4.3.1 Registo e início de sessão
-  - 4.3.2 Proteção das rotas por papel na casa (dono/gestor/membro) (casas) ◐ (base testada, falta permitir ao membro gerir objetos conforme decisão de 18/11)
+  - 4.3.2 Proteção das rotas por papel na casa (dono/gestor/membro) (casas) ✅ (membro gere objetos e fotos, conforme decisão de 18/11)
 - 4.4 Endpoints da API
   - 4.4.1 Objetos (CRUD, pesquisa e filtro)
   - 4.4.2 Tarefas (CRUD, concluir e histórico)
   - 4.4.3 Repetição de tarefas
   - 4.4.4 Categorias (lista fixa, só consulta) (casas) ✅
-  - 4.4.5 Dicas (consulta; gestão por dono e gestor) (casas) ◐ (falta associar ao objeto e aceitar vídeo opcional conforme decisão de 18/11)
+  - 4.4.5 Dicas por objeto (consulta, vídeo opcional, gestão por dono e gestor) (casas) ✅ (backend)
   - 4.4.6 Casa e convites (código, entrar, sair, papéis) (casas) ✅ (API testada)
   - 4.4.7 Migração dos dados existentes para casas (casas) ◐ (scripts testados, aplicação na base partilhada pendente)
 - 4.5 Fotografias

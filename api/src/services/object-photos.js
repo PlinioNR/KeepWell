@@ -4,19 +4,12 @@ import { parseObjectId, toPublicObject } from '../models/object.js';
 import { normalizePhoto, writePhotoFile, readPhotoFile, removePhotoFile } from '../storage/photo-files.js';
 
 export async function requirePhotoUploadAccess(req, res, next) {
-  const user = req.auth.user;
   const scope = req.objectScope;
   const object = await getDatabase().collection('objects').findOne(
-    { _id: parseObjectId(req.params.id), ...scope }, { projection: { createdBy: 1, photoKey: 1 } }
+    { _id: parseObjectId(req.params.id), ...scope }, { projection: { _id: 1 } }
   );
   if (!object) return res.status(404).json({ error: 'Objeto não encontrado.' });
 
-  // Um membro pode enviar a primeira fotografia do objeto que criou.
-  if (user.houseRole === 'member') {
-    if (!object.createdBy?.equals(user._id) || object.photoKey) {
-      return res.status(403).json({ error: 'Não tens permissão para esta ação.' });
-    }
-  }
   next();
 }
 
@@ -30,15 +23,13 @@ export async function saveObjectPhoto(id, buffer, actor) {
   try {
     // Atualização atómica: a resposta anterior identifica apenas o ficheiro substituído.
     previous = await withDatabaseTransaction(async (database, session) => {
-      const currentActor = await lockHouseActor(database, session, actor);
+      await lockHouseActor(database, session, actor);
       const filter = { _id, houseId: actor.houseId };
-      if (currentActor.houseRole === 'member') Object.assign(filter, { createdBy: actor._id, photoKey: null });
       const found = await database.collection('objects').findOneAndUpdate(
         filter, { $set: { photoKey: key, updatedAt } }, { session, returnDocument: 'before' }
       );
       if (!found) {
-        const exists = await database.collection('objects').findOne({ _id, houseId: actor.houseId }, { session });
-        throw Object.assign(new Error(exists ? 'Não tens permissão para esta ação.' : 'Objeto não encontrado.'), { status: exists ? 403 : 404 });
+        throw Object.assign(new Error('Objeto não encontrado.'), { status: 404 });
       }
       return found;
     });
@@ -63,7 +54,7 @@ export async function getObjectPhoto(id, scope) {
 
 export async function deleteObjectPhoto(id, scope, actor) {
   const object = await withDatabaseTransaction(async (database, session) => {
-    await lockHouseActor(database, session, actor, ['owner', 'manager']);
+    await lockHouseActor(database, session, actor);
     return database.collection('objects').findOneAndUpdate(
       { _id: parseObjectId(id), ...scope }, { $set: { photoKey: null, updatedAt: new Date() } }, { session, returnDocument: 'before' }
     );
