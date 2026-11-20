@@ -102,7 +102,9 @@ class _TipsScreenState extends State<TipsScreen> {
             ),
         ],
       ),
-      body: _buildBody(),
+      // AnimatedSwitcher: ao passar de "a carregar" para a lista (ou erro),
+      // o conteúdo novo aparece com um esbatimento (fade).
+      body: AnimatedSwitcher(duration: AppMotion.short, child: _buildBody()),
     );
   }
 

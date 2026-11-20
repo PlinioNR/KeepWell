@@ -31,33 +31,47 @@ class CategoryChip extends StatelessWidget {
     final border = selected ? colors.primary : colors.outlineVariant;
     final foreground = selected ? colors.onPrimary : colors.onSurface;
 
-    // Material + InkWell: fundo arredondado com efeito de toque.
-    return Material(
-      color: background,
-      shape: StadiumBorder(side: BorderSide(color: border)),
+    // AnimatedContainer: quando as cores mudam, passa de umas para as
+    // outras aos poucos (AppMotion.short) em vez de mudar de repente.
+    return AnimatedContainer(
+      duration: AppMotion.short,
+      decoration: ShapeDecoration(
+        color: background,
+        shape: StadiumBorder(side: BorderSide(color: border)),
+      ),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          // Altura mínima de 44 para ser fácil de tocar (como no Figma).
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // "if" dentro da lista: o ✓ só aparece quando está selecionado.
-              if (selected) ...[
-                Icon(LucideIcons.check, size: 16, color: foreground),
-                const SizedBox(width: AppSpacing.sm),
-              ],
-              Text(
-                label,
-                style: theme.textTheme.labelMedium?.copyWith(color: foreground),
+      // Material transparente: o InkWell precisa dele para o efeito de toque.
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: onTap,
+          child: Container(
+            // Altura mínima de 44 para ser fácil de tocar (como no Figma).
+            constraints: const BoxConstraints(minHeight: 44),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
+            // AnimatedSize: o chip alarga devagar quando aparece o ✓.
+            child: AnimatedSize(
+              duration: AppMotion.short,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // "if" dentro da lista: o ✓ só aparece quando está selecionado.
+                  if (selected) ...[
+                    Icon(LucideIcons.check, size: 16, color: foreground),
+                    const SizedBox(width: AppSpacing.sm),
+                  ],
+                  Text(
+                    label,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: foreground,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

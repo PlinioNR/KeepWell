@@ -199,7 +199,9 @@ class _HouseScreenState extends State<HouseScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('A minha casa')),
-      body: _buildBody(),
+      // AnimatedSwitcher: ao passar de "a carregar" para a lista (ou erro),
+      // o conteúdo novo aparece com um esbatimento (fade).
+      body: AnimatedSwitcher(duration: AppMotion.short, child: _buildBody()),
     );
   }
 

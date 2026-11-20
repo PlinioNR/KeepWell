@@ -15,3 +15,8 @@ abstract final class AppRadius {
   static const double lg = 16;
   static const double full = 999;
 }
+
+/// Duração das animações pequenas (mudar de cor, aparecer uma lista).
+abstract final class AppMotion {
+  static const short = Duration(milliseconds: 250);
+}
