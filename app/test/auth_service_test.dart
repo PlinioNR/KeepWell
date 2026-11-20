@@ -196,4 +196,33 @@ void main() {
 
     expect(Session.isLoggedIn, false);
   });
+
+  test('updateName: envia PATCH /auth/me e guarda o nome na sessão', () async {
+    late http.Request sentRequest;
+    final service = AuthService(
+      client: MockClient((request) async {
+        sentRequest = request;
+        return http.Response(
+          jsonEncode({
+            'user': {
+              'id': 'u1',
+              'name': 'Ana Silva',
+              'email': 'ana@x.pt',
+              'houseId': 'h1',
+              'houseRole': 'owner',
+            },
+          }),
+          200,
+        );
+      }),
+    );
+
+    await service.updateName('Ana Silva');
+
+    expect(sentRequest.method, 'PATCH');
+    expect(sentRequest.url.path, '/auth/me');
+    expect(jsonDecode(sentRequest.body), {'name': 'Ana Silva'});
+    expect(Session.user?.name, 'Ana Silva');
+    Session.clear();
+  });
 }

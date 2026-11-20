@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/user.dart';
+import 'api_client.dart';
 import 'api_config.dart';
 import 'api_exception.dart';
 import 'session.dart';
@@ -20,6 +21,13 @@ class AuthService {
 
   /// Tempo máximo de espera por uma resposta da API.
   static const _timeout = Duration(seconds: 10);
+
+  /// Muda o nome de quem tem sessão (PATCH /auth/me) e guarda-o na sessão.
+  Future<void> updateName(String name) async {
+    final body = await ApiClient(client: _client)
+        .patch('/auth/me', {'name': name});
+    Session.user = User.fromJson(body['user'] as Map<String, dynamic>);
+  }
 
   /// Cria uma conta nova: POST /auth/register.
   ///
