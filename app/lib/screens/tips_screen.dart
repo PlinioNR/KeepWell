@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/tip.dart';
 import '../models/user_object.dart';
@@ -72,6 +73,19 @@ class _TipsScreenState extends State<TipsScreen> {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
     _loadTips();
+  }
+
+  /// Abre o link do vídeo fora da app (YouTube ou navegador).
+  Future<void> _openVideo(String url) async {
+    // catchError: se o pacote der erro, conta como "não abriu".
+    final opened = await launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
+    ).catchError((_) => false);
+    if (opened || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Não foi possível abrir o vídeo.')),
+    );
   }
 
   @override
@@ -157,6 +171,13 @@ class _TipsScreenState extends State<TipsScreen> {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(tip.text, style: secondaryText),
+                // Só aparece se a dica tiver link.
+                if (tip.videoUrl != null)
+                  TextButton.icon(
+                    icon: const Icon(LucideIcons.circlePlay),
+                    label: const Text('VER VÍDEO'),
+                    onPressed: () => _openVideo(tip.videoUrl!),
+                  ),
               ],
             ),
           ),
