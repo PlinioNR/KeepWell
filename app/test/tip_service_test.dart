@@ -45,4 +45,45 @@ void main() {
     expect(tips[0].videoUrl, 'https://exemplo.pt/video');
     expect(tips[1].videoUrl, isNull);
   });
+
+  test('criar, alterar e eliminar enviam os pedidos certos', () async {
+    final requests = <http.Request>[];
+    final service = TipService(
+      api: ApiClient(
+        client: MockClient((request) async {
+          requests.add(request);
+          return request.method == 'DELETE'
+              ? http.Response('', 204)
+              : http.Response(jsonEncode({}), 200);
+        }),
+      ),
+    );
+
+    await service.saveTip(
+      objectId: 'o1',
+      title: 'Descalcificar',
+      text: 'Uma vez por mês.',
+      videoUrl: '',
+    );
+    await service.saveTip(
+      id: 't1',
+      objectId: 'o1',
+      title: 'Descalcificar',
+      text: 'Uma vez por mês.',
+      videoUrl: 'https://exemplo.pt/video',
+    );
+    await service.deleteTip('t1');
+
+    expect(requests.map((r) => '${r.method} ${r.url.path}'), [
+      'POST /tips',
+      'PATCH /tips/t1',
+      'DELETE /tips/t1',
+    ]);
+    expect(jsonDecode(requests[0].body), {
+      'objectId': 'o1',
+      'title': 'Descalcificar',
+      'text': 'Uma vez por mês.',
+      'videoUrl': '',
+    });
+  });
 }

@@ -265,7 +265,7 @@ void main() {
     await tester.tap(find.text('GUARDAR CUIDADO'));
     await tester.pump();
 
-    expect(find.text('Escreva a tarefa.'), findsOneWidget);
+    expect(find.text('Escreva o título.'), findsOneWidget);
     expect(find.text('Escolha a data.'), findsOneWidget);
   });
 

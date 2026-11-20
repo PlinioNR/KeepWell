@@ -18,4 +18,28 @@ class TipService {
         .map((json) => Tip.fromJson(json as Map<String, dynamic>))
         .toList();
   }
+
+  /// Cria uma dica (POST /tips) ou, se tiver [id], altera-a (PATCH /tips/:id).
+  ///
+  /// [videoUrl] vazio fica sem vídeo (a API guarda null).
+  Future<void> saveTip({
+    String? id,
+    required String objectId,
+    required String title,
+    required String text,
+    required String videoUrl,
+  }) {
+    final body = {
+      'objectId': objectId,
+      'title': title,
+      'text': text,
+      'videoUrl': videoUrl,
+    };
+    return id == null
+        ? _api.post('/tips', body)
+        : _api.patch('/tips/$id', body);
+  }
+
+  /// Elimina uma dica: DELETE /tips/:id.
+  Future<void> deleteTip(String id) => _api.delete('/tips/$id');
 }

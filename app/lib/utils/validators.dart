@@ -41,11 +41,20 @@ String? validateObjectName(String? value) {
   return null;
 }
 
-/// Título de um cuidado: obrigatório, entre 2 e 120 caracteres (regra da API).
+/// Título de um cuidado ou de uma dica: obrigatório, entre 2 e 120
+/// caracteres (regra da API).
 String? validateCareTitle(String? value) {
   final title = value?.trim() ?? '';
-  if (title.isEmpty) return 'Escreva a tarefa.';
+  if (title.isEmpty) return 'Escreva o título.';
   if (title.length < 2) return 'Use pelo menos 2 caracteres.';
   if (title.length > 120) return 'Use no máximo 120 caracteres.';
   return null;
+}
+
+/// Link do vídeo de uma dica: opcional, mas se existir tem de começar
+/// por http:// ou https:// (regra da API).
+String? validateVideoUrl(String? value) {
+  final url = value?.trim() ?? '';
+  if (url.isEmpty || url.startsWith(RegExp('https?://'))) return null;
+  return 'O link deve começar por https://';
 }

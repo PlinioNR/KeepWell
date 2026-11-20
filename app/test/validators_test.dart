@@ -22,8 +22,17 @@ void main() {
   });
 
   test('validateCareTitle: obrigatório, pelo menos 2 caracteres', () {
-    expect(validateCareTitle(''), 'Escreva a tarefa.');
+    expect(validateCareTitle(''), 'Escreva o título.');
     expect(validateCareTitle('a'), 'Use pelo menos 2 caracteres.');
     expect(validateCareTitle('Lubrificar a corrente'), isNull);
+  });
+
+  test('validateVideoUrl: opcional, mas tem de começar por http(s)://', () {
+    expect(validateVideoUrl(''), isNull);
+    expect(validateVideoUrl('https://youtu.be/abc'), isNull);
+    expect(
+      validateVideoUrl('youtu.be/abc'),
+      'O link deve começar por https://',
+    );
   });
 }

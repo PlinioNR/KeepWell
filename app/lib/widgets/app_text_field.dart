@@ -18,7 +18,11 @@ class AppTextField extends StatelessWidget {
     this.obscureText = false,
     this.validator,
     this.onFieldSubmitted,
+    this.maxLines = 1,
   });
+
+  /// Número de linhas visíveis (mais de 1 para textos longos).
+  final int maxLines;
 
   /// Texto por cima do campo (ex.: "Email").
   final String label;
@@ -58,6 +62,7 @@ class AppTextField extends StatelessWidget {
           obscureText: obscureText,
           validator: validator,
           onFieldSubmitted: onFieldSubmitted,
+          maxLines: maxLines,
           decoration: InputDecoration(hintText: hint),
         ),
       ],
