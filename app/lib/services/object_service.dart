@@ -1,6 +1,7 @@
 import 'package:image_picker/image_picker.dart';
 
 import '../models/category.dart';
+import '../models/history_event.dart';
 import '../models/user_object.dart';
 import 'api_client.dart';
 
@@ -21,6 +22,17 @@ class ObjectService {
     // Transforma cada mapa JSON num UserObject.
     return list
         .map((json) => UserObject.fromJson(json as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Histórico de um objeto: GET /objects/:id/history.
+  ///
+  /// Vem do mais recente para o mais antigo (o último é "Objeto adicionado").
+  Future<List<HistoryEvent>> fetchHistory(String objectId) async {
+    final body = await _api.get('/objects/$objectId/history?pageSize=100');
+    final list = body['events'] as List;
+    return list
+        .map((json) => HistoryEvent.fromJson(json as Map<String, dynamic>))
         .toList();
   }
 

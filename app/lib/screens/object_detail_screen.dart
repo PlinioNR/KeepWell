@@ -12,6 +12,7 @@ import '../widgets/category_chip.dart';
 import '../widgets/object_photo.dart';
 import 'add_care_screen.dart';
 import 'add_object_screen.dart';
+import 'object_history_screen.dart';
 import 'tips_screen.dart';
 
 /// Ecrã 08 Object Detail: mostra os dados de um objeto.
@@ -171,8 +172,7 @@ class ObjectDetailScreen extends StatelessWidget {
               ),
             ),
             // Botões fixos em baixo, como no Figma.
-            // "Ver histórico" está desativado (onPressed: null) até
-            // haver o ecrã 09 Object History; "Ver dicas" abre o ecrã 18.
+            // "Ver histórico" abre o ecrã 09 e "Ver dicas" o ecrã 18.
             Padding(
               padding: const EdgeInsets.all(AppSpacing.md),
               child: Column(
@@ -193,10 +193,16 @@ class ObjectDetailScreen extends StatelessWidget {
                   // Lado a lado, como no Figma; Expanded divide a largura.
                   Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: OutlinedButton(
-                          onPressed: null,
-                          child: Text('VER HISTÓRICO'),
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  ObjectHistoryScreen(object: object),
+                            ),
+                          ),
+                          child: const Text('VER HISTÓRICO'),
                         ),
                       ),
                       const SizedBox(width: AppSpacing.sm),

@@ -244,4 +244,31 @@ void main() {
       ),
     );
   });
+
+  test('fetchHistory: lê cuidados concluídos e "Objeto adicionado"', () async {
+    final service = ObjectService(
+      api: ApiClient(
+        client: MockClient((request) async {
+          expect(request.url.path, '/objects/o1/history');
+          return jsonResponse({
+            'events': [
+              {
+                'type': 'care_completed',
+                'occurredAt': '2026-11-09T14:47:12.752Z',
+                'task': {'title': 'Aspirar o sofá', 'notes': ''},
+              },
+              {'type': 'object_added', 'occurredAt': '2026-11-06T11:20:32Z'},
+            ],
+          }, 200);
+        }),
+      ),
+    );
+
+    final events = await service.fetchHistory('o1');
+
+    expect(events[0].title, 'Aspirar o sofá');
+    expect(events[0].notes, 'Sem observações.');
+    expect(events[1].title, 'Objeto adicionado');
+    expect(events[1].notes, '');
+  });
 }
