@@ -251,6 +251,7 @@ class _ObjectsScreenState extends State<ObjectsScreen> {
                       name: object.name,
                       category: categoryName,
                       photoUrl: object.photoUrl,
+                      nextCareDueOn: object.nextCareDueOn,
                       // Toque no cartão: abre o ecrã de detalhe.
                       onTap: () => _openAndReload(
                         ObjectDetailScreen(

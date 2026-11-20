@@ -32,6 +32,15 @@ class Care {
   bool get isOverdue =>
       !isDone && dueOn.compareTo(formatDateForApi(DateTime.now())) < 0;
 
+  /// Dias que contam como "esta semana" no Início.
+  static const _weekDays = 7;
+
+  /// Por fazer até daqui a 7 dias (inclui os que estão em atraso).
+  bool get isDueThisWeek {
+    final weekEnd = DateTime.now().add(const Duration(days: _weekDays));
+    return !isDone && dueOn.compareTo(formatDateForApi(weekEnd)) <= 0;
+  }
+
   /// Cria um Care a partir do JSON da API.
   factory Care.fromJson(Map<String, dynamic> json) {
     return Care(

@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../theme/app_spacing.dart';
+import '../utils/date_format.dart';
 import 'object_photo.dart';
 
 /// Cartão de um objeto na lista (componente Object Card do Figma).
 ///
-/// Mostra a foto (ou um ícone, se não tiver), o nome, a categoria e uma
-/// seta. O aspeto (fundo, borda e cantos)
+/// Mostra a foto (ou um ícone, se não tiver), o nome, a categoria, a data
+/// do próximo cuidado (se houver) e uma seta. O aspeto (fundo, borda e cantos)
 /// vem do cardTheme em app_theme.dart.
 class ObjectCard extends StatelessWidget {
   const ObjectCard({
@@ -15,8 +16,12 @@ class ObjectCard extends StatelessWidget {
     required this.name,
     required this.category,
     this.photoUrl,
+    this.nextCareDueOn,
     this.onTap,
   });
+
+  /// Data do próximo cuidado ('AAAA-MM-DD'), ou null se não houver.
+  final String? nextCareDueOn;
 
   final String name;
   final String category;
@@ -71,6 +76,16 @@ class ObjectCard extends StatelessWidget {
                         color: colors.onSurfaceVariant,
                       ),
                     ),
+                    // Linha coral (secondary) só se houver cuidado por fazer.
+                    if (nextCareDueOn != null) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Próximo cuidado · ${formatApiDate(nextCareDueOn!)}',
+                        style: text.bodySmall?.copyWith(
+                          color: colors.secondary,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

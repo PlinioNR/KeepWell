@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:keepwell/models/care.dart';
+import 'package:keepwell/utils/date_format.dart';
 import 'package:keepwell/services/api_client.dart';
 import 'package:keepwell/services/care_service.dart';
 
@@ -75,6 +77,23 @@ void main() {
     expect(cares[1].isDone, isTrue);
     // Concluído nunca está em atraso.
     expect(cares[1].isOverdue, isFalse);
+  });
+
+  test('isDueThisWeek: por fazer até daqui a 7 dias, com os em atraso', () {
+    // Cria um cuidado com a data prevista daqui a [days] dias.
+    Care careIn(int days, {bool isDone = false}) => Care(
+      id: 't',
+      objectId: 'o',
+      objectName: 'Bicicleta',
+      title: 'Lubrificar',
+      dueOn: formatDateForApi(DateTime.now().add(Duration(days: days))),
+      isDone: isDone,
+    );
+
+    expect(careIn(-3).isDueThisWeek, isTrue); // em atraso
+    expect(careIn(7).isDueThisWeek, isTrue); // último dia da semana
+    expect(careIn(8).isDueThisWeek, isFalse); // já fica para depois
+    expect(careIn(0, isDone: true).isDueThisWeek, isFalse); // concluído
   });
 
   test('completeCare: envia POST /tasks/:id/complete', () async {
