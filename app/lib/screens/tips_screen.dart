@@ -37,7 +37,9 @@ class _TipsScreenState extends State<TipsScreen> {
   /// Pede as dicas deste objeto à API.
   Future<void> _loadTips() async {
     setState(() {
-      _isLoading = true;
+      // Só mostra "a carregar" se ainda não houver nada no ecrã; senão a
+      // lista fica visível e atualiza-se quando chegam os dados novos.
+      _isLoading = _tips.isEmpty;
       _errorMessage = null;
     });
     try {

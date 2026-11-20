@@ -286,6 +286,7 @@ void main() {
               title: 'Lubrificar a corrente',
               dueOn: '2000-01-01',
               isDone: false,
+              repeatEveryDays: 30,
             ),
           ),
         ),
@@ -295,6 +296,7 @@ void main() {
     expect(find.text('Lubrificar a corrente'), findsOneWidget);
     expect(find.text('Bicicleta urbana · 01/01/2000'), findsOneWidget);
     expect(find.text('Em atraso'), findsOneWidget);
+    expect(find.text('Repete a cada 30 dias'), findsOneWidget);
   });
 
   testWidgets('CareCard: tocar no círculo chama onComplete', (tester) async {

@@ -92,7 +92,9 @@ class _ObjectsScreenState extends State<ObjectsScreen> {
   /// Pede os objetos e as categorias à API.
   Future<void> _loadObjects() async {
     setState(() {
-      _isLoading = true;
+      // Só mostra "a carregar" se ainda não houver nada no ecrã; senão a
+      // lista fica visível e atualiza-se quando chegam os dados novos.
+      _isLoading = _objects.isEmpty;
       _errorMessage = null;
     });
 

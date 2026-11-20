@@ -64,7 +64,9 @@ class _CareScreenState extends State<CareScreen> {
   /// Pede os cuidados à API.
   Future<void> _loadCares() async {
     setState(() {
-      _isLoading = true;
+      // Só mostra "a carregar" se ainda não houver nada no ecrã; senão a
+      // lista fica visível e atualiza-se quando chegam os dados novos.
+      _isLoading = _cares.isEmpty;
       _errorMessage = null;
     });
     try {
@@ -87,12 +89,18 @@ class _CareScreenState extends State<CareScreen> {
   ///
   /// Pede confirmação porque a API não tem "desfazer".
   Future<void> _complete(Care care) async {
+    // Se o cuidado se repete, a API cria logo o próximo: avisamos antes.
+    final days = care.repeatEveryDays;
+    final repeatNote = days == null
+        ? ''
+        : ' Como se repete, o próximo fica para daqui a $days dias.';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Concluir cuidado?'),
         content: Text(
-          '"${care.title}" fica no histórico de ${care.objectName}.',
+          '"${care.title}" fica no histórico de ${care.objectName}.'
+          '$repeatNote',
         ),
         actions: [
           TextButton(
@@ -112,7 +120,7 @@ class _CareScreenState extends State<CareScreen> {
     try {
       await _careService.completeCare(care.id);
       messenger.showSnackBar(
-        const SnackBar(content: Text('Cuidado concluído.')),
+        SnackBar(content: Text('Cuidado concluído.$repeatNote')),
       );
       _loadCares();
     } on ApiException catch (error) {
@@ -249,6 +257,9 @@ class _CareScreenState extends State<CareScreen> {
                     separatorBuilder: (context, index) =>
                         const SizedBox(height: AppSpacing.md),
                     itemBuilder: (context, index) => CareCard(
+                      // A chave (id) diz ao Flutter que é o mesmo cuidado
+                      // antes e depois de recarregar: assim anima ao concluir.
+                      key: ValueKey(visibleCares[index].id),
                       care: visibleCares[index],
                       // null = o membro não pode concluir (o círculo fica desativado).
                       onComplete: _canManage

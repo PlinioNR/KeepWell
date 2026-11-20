@@ -11,7 +11,12 @@ class Care {
     required this.title,
     required this.dueOn,
     required this.isDone,
+    this.repeatEveryDays,
   });
+
+  /// De quantos em quantos dias se repete (null = não se repete).
+  /// Ao concluir, a API cria logo o próximo para hoje + estes dias.
+  final int? repeatEveryDays;
 
   final String id;
   final String objectId;
@@ -50,6 +55,7 @@ class Care {
       title: json['title'] as String,
       dueOn: json['dueOn'] as String,
       isDone: json['status'] == 'completed',
+      repeatEveryDays: json['repeatEveryDays'] as int?,
     );
   }
 }

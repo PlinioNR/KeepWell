@@ -55,27 +55,34 @@ class CareCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Círculo: verde com ✓ se concluído, vazio se não.
-            care.isDone
-                ? const CircleAvatar(
-                    radius: _circleSize / 2,
-                    backgroundColor: AppColors.success600,
-                    child: Icon(
-                      LucideIcons.check,
-                      size: _smallIconSize,
-                      color: AppColors.white,
+            // AnimatedSwitcher + ScaleTransition: ao concluir, o círculo
+            // verde aparece a crescer em vez de surgir de repente.
+            AnimatedSwitcher(
+              duration: AppMotion.short,
+              transitionBuilder: (child, animation) =>
+                  ScaleTransition(scale: animation, child: child),
+              child: care.isDone
+                  ? const CircleAvatar(
+                      radius: _circleSize / 2,
+                      backgroundColor: AppColors.success600,
+                      child: Icon(
+                        LucideIcons.check,
+                        size: _smallIconSize,
+                        color: AppColors.white,
+                      ),
+                    )
+                  // IconButton: área de toque de 48 × 48 à volta do círculo
+                  // (fácil de acertar com o dedo).
+                  : IconButton(
+                      onPressed: onComplete,
+                      tooltip: 'Marcar como concluído',
+                      icon: Icon(
+                        LucideIcons.circle,
+                        size: _circleSize,
+                        color: colors.onSurfaceVariant,
+                      ),
                     ),
-                  )
-                // IconButton: área de toque de 48 × 48 à volta do círculo
-                // (fácil de acertar com o dedo).
-                : IconButton(
-                    onPressed: onComplete,
-                    tooltip: 'Marcar como concluído',
-                    icon: Icon(
-                      LucideIcons.circle,
-                      size: _circleSize,
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
+            ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
@@ -95,9 +102,31 @@ class CareCard extends StatelessWidget {
                       color: colors.onSurfaceVariant,
                     ),
                   ),
+                  // Só nos cuidados que se repetem.
+                  if (care.repeatEveryDays != null) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Row(
+                      children: [
+                        Icon(
+                          LucideIcons.repeat,
+                          size: _smallIconSize,
+                          color: colors.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        Text(
+                          'Repete a cada ${care.repeatEveryDays} dias',
+                          style: text.bodySmall?.copyWith(
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: AppSpacing.xs),
                   // Etiqueta de estado (Status Badge do Figma).
-                  Container(
+                  // AnimatedContainer: a cor de fundo muda aos poucos.
+                  AnimatedContainer(
+                    duration: AppMotion.short,
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.sm,
                       vertical: AppSpacing.xs,
