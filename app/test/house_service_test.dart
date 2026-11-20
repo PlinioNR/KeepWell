@@ -50,4 +50,33 @@ void main() {
 
     expect(house.inviteCode, isNull);
   });
+
+  test(
+    'gerar código, mudar papel e remover enviam os pedidos certos',
+    () async {
+      final requests = <http.Request>[];
+      final service = HouseService(
+        api: ApiClient(
+          client: MockClient((request) async {
+            requests.add(request);
+            // DELETE devolve 204 (sem corpo); os outros devolvem JSON.
+            return request.method == 'DELETE'
+                ? http.Response('', 204)
+                : http.Response(jsonEncode({}), 200);
+          }),
+        ),
+      );
+
+      await service.generateInvite();
+      await service.changeRole('u2', 'manager');
+      await service.removeMember('u2');
+
+      expect(requests.map((r) => '${r.method} ${r.url.path}'), [
+        'POST /house/invite',
+        'PATCH /house/members/u2',
+        'DELETE /house/members/u2',
+      ]);
+      expect(jsonDecode(requests[1].body), {'role': 'manager'});
+    },
+  );
 }

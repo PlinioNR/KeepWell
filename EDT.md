@@ -57,7 +57,7 @@ Alteração de âmbito (17/11/2026, combinada com o professor): o administrador 
   - 3.3.6 Publicação da biblioteca
 - 3.4 Protótipo interativo
   - 3.4.1 Ecrãs do utilizador comum ◐
-  - 3.4.2 Ecrãs da casa (membros, convite) e das dicas (casas; os ecrãs do administrador 15–17 saem) ◐ (modo claro feito a 18/11: 14 com "A minha casa", 15 em 5 versões, 08 com "Ver dicas", 18 Dicas do objeto (com versão do membro), 19 sem categoria, 16–17 no Archive; falta o modo escuro)
+  - 3.4.2 Ecrãs da casa (membros, convite) e das dicas (casas; os ecrãs do administrador 15–17 saem) ✅ (18/11, modo claro e escuro: 14 com "A minha casa", 15 em 5 versões, 08 com "Ver dicas", 18 Dicas do objeto com link de vídeo e versão do membro, 19 sem categoria e com link; 16–17 no Archive)
   - 3.4.3 Ajustes ao âmbito (arquivar Recuperar acesso) e ecrãs em falta
   - 3.4.4 Ligações, transições e overlays
   - 3.4.5 Handoff e revisão cruzada
