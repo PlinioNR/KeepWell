@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:keepwell/services/api_client.dart';
 import 'package:keepwell/services/house_service.dart';
+import 'package:keepwell/services/session.dart';
 
 /// Testes do HouseService com uma API "a fingir" (MockClient).
 void main() {
@@ -79,4 +80,42 @@ void main() {
       expect(jsonDecode(requests[1].body), {'role': 'manager'});
     },
   );
+  test('entrar com código e sair atualizam o papel na sessão', () async {
+    final requests = <String>[];
+    // Depois de entrar, a API diz que a pessoa passou a membro.
+    final service = HouseService(
+      api: ApiClient(
+        client: MockClient((request) async {
+          requests.add('${request.method} ${request.url.path}');
+          if (request.url.path == '/auth/me') {
+            return http.Response(
+              jsonEncode({
+                'user': {
+                  'id': 'u2',
+                  'name': 'Bruno',
+                  'email': 'b@x.pt',
+                  'houseId': 'h1',
+                  'houseRole': 'member',
+                },
+              }),
+              200,
+            );
+          }
+          return http.Response(jsonEncode({}), 200);
+        }),
+      ),
+    );
+
+    await service.join('K7PM3QXA');
+    expect(Session.user?.houseRole, 'member');
+
+    await service.leave();
+    expect(requests, [
+      'POST /house/join',
+      'GET /auth/me',
+      'POST /house/leave',
+      'GET /auth/me',
+    ]);
+    Session.clear();
+  });
 }

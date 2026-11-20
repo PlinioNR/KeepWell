@@ -7,11 +7,13 @@ import '../services/house_service.dart';
 import '../services/session.dart';
 import '../theme/app_spacing.dart';
 import '../utils/date_format.dart';
+import 'main_screen.dart';
 
 /// Ecrã 15 A minha casa: nome da casa, código de convite e membros.
 ///
 /// Dono e gestor geram o código; só o dono muda papéis e remove pessoas.
-/// Entrar noutra casa e sair vêm no passo seguinte.
+/// Quem está sozinho pode entrar noutra casa com um código; gestor e
+/// membro podem sair.
 class HouseScreen extends StatefulWidget {
   const HouseScreen({super.key});
 
@@ -55,15 +57,100 @@ class _HouseScreenState extends State<HouseScreen> {
   /// Faz uma ação na API; se correr bem mostra [message] e recarrega a casa.
   ///
   /// Usada por todos os botões deste ecrã, para não repetir o try/catch.
-  Future<void> _run(Future<void> Function() action, String message) async {
+  /// [restartApp]: quando a pessoa muda de casa, os objetos e cuidados já
+  /// carregados deixam de valer, por isso a app volta ao ecrã principal.
+  Future<void> _run(
+    Future<void> Function() action,
+    String message, {
+    bool restartApp = false,
+  }) async {
     final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context, rootNavigator: true);
     try {
       await action();
       messenger.showSnackBar(SnackBar(content: Text(message)));
-      _loadHouse();
+      if (!restartApp) {
+        _loadHouse();
+        return;
+      }
+      // Abre o ecrã principal de novo e apaga os ecrãs anteriores.
+      navigator.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const MainScreen()),
+        (route) => false,
+      );
     } on ApiException catch (error) {
       messenger.showSnackBar(SnackBar(content: Text(error.message)));
     }
+  }
+
+  /// Caixa "Entrar numa casa": pede o código de convite.
+  Future<void> _joinWithCode() async {
+    final controller = TextEditingController();
+    // A caixa devolve o código escrito, ou null se cancelar.
+    final code = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Entrar numa casa'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Escreva o código que recebeu. Entra como membro e a sua '
+              'casa vazia é apagada.',
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              // Mostra o teclado em maiúsculas, como os códigos.
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                labelText: 'Código de convite',
+                hintText: 'Ex.: K7PM3QXA',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCELAR'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('ENTRAR'),
+          ),
+        ],
+      ),
+    );
+    if (code == null || code.isEmpty) return;
+    _run(() => HouseService().join(code), 'Entrou na casa.', restartApp: true);
+  }
+
+  /// Gestor ou membro: pede confirmação e sai da casa.
+  Future<void> _leave() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sair da casa?'),
+        content: const Text(
+          'Deixa de ver os objetos e cuidados desta casa e fica com uma '
+          'casa nova, só sua.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCELAR'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('SAIR'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    _run(HouseService().leave, 'Saiu da casa.', restartApp: true);
   }
 
   /// Caixa do dono ao tocar numa pessoa: mudar o papel ou remover.
@@ -210,6 +297,30 @@ class _HouseScreenState extends State<HouseScreen> {
         // Um ListTile por pessoa; "(você)" marca quem está a usar a app.
         for (final member in house.members)
           _memberTile(member, isMe: member.id == me?.id),
+
+        // Sozinho na casa: pode entrar na casa de outra pessoa.
+        if (house.members.length == 1) ...[
+          const SizedBox(height: AppSpacing.lg),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FilledButton(
+              onPressed: _joinWithCode,
+              child: const Text('TENHO UM CÓDIGO'),
+            ),
+          ),
+        ],
+
+        // O dono não pode sair (simplificação combinada).
+        if (!(me?.isOwner ?? true)) ...[
+          const SizedBox(height: AppSpacing.lg),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton(
+              onPressed: _leave,
+              child: const Text('SAIR DA CASA'),
+            ),
+          ),
+        ],
       ],
     );
   }
