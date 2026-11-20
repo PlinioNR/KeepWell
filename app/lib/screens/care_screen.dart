@@ -5,6 +5,7 @@ import '../models/care.dart';
 import '../services/api_exception.dart';
 import '../services/care_service.dart';
 import '../services/object_service.dart';
+import '../services/session.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/care_card.dart';
 import '../widgets/category_chip.dart';
@@ -145,6 +146,9 @@ class _CareScreenState extends State<CareScreen> {
     }
   }
 
+  /// Dono e gestor gerem os cuidados; o membro só os vê.
+  bool get _canManage => Session.user?.canManage ?? false;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -153,11 +157,13 @@ class _CareScreenState extends State<CareScreen> {
         automaticallyImplyLeading: false,
         title: const Text('Cuidados'),
         actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.plus),
-            tooltip: 'Adicionar cuidado',
-            onPressed: _openAddCare,
-          ),
+          // O "+" só aparece a quem pode criar cuidados.
+          if (_canManage)
+            IconButton(
+              icon: const Icon(LucideIcons.plus),
+              tooltip: 'Adicionar cuidado',
+              onPressed: _openAddCare,
+            ),
         ],
       ),
       body: _buildBody(),
@@ -242,7 +248,10 @@ class _CareScreenState extends State<CareScreen> {
                         const SizedBox(height: AppSpacing.md),
                     itemBuilder: (context, index) => CareCard(
                       care: visibleCares[index],
-                      onComplete: () => _complete(visibleCares[index]),
+                      // null = o membro não pode concluir (o círculo fica desativado).
+                      onComplete: _canManage
+                          ? () => _complete(visibleCares[index])
+                          : null,
                     ),
                   ),
           ),

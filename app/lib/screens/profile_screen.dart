@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../models/house.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../theme/app_spacing.dart';
+import 'house_screen.dart';
 import 'welcome_screen.dart';
 
 /// Separador Perfil — VERSÃO PROVISÓRIA.
@@ -46,6 +49,18 @@ class ProfileScreen extends StatelessWidget {
           Text(
             user?.email ?? '',
             style: text.bodyLarge?.copyWith(color: colors.onSurfaceVariant),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          // Abre o ecrã 15 A minha casa.
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('A minha casa'),
+            subtitle: Text(House.roleLabels[user?.houseRole] ?? ''),
+            trailing: const Icon(LucideIcons.chevronRight),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const HouseScreen()),
+            ),
           ),
           const SizedBox(height: AppSpacing.lg),
           OutlinedButton(

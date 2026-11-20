@@ -5,10 +5,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:keepwell/main.dart';
 import 'package:keepwell/models/care.dart';
 import 'package:keepwell/models/category.dart';
+import 'package:keepwell/models/user.dart';
 import 'package:keepwell/models/user_object.dart';
 import 'package:keepwell/screens/add_care_screen.dart';
 import 'package:keepwell/screens/add_object_screen.dart';
 import 'package:keepwell/screens/object_detail_screen.dart';
+import 'package:keepwell/services/session.dart';
 import 'package:keepwell/theme/app_theme.dart';
 import 'package:keepwell/widgets/care_card.dart';
 import 'package:keepwell/widgets/category_chip.dart';
@@ -204,6 +206,43 @@ void main() {
     await tester.scrollUntilVisible(find.text('Lubrificar a corrente'), 100);
     expect(find.text('Lubrificar a corrente'), findsOneWidget);
     expect(find.text('15/11/2026'), findsOneWidget);
+  });
+
+  testWidgets('Adicionar cuidado só aparece ao dono e ao gestor', (
+    tester,
+  ) async {
+    // Abre o Detalhe com sessão iniciada no papel indicado.
+    Future<void> openAs(String role) async {
+      Session.user = User(
+        id: 'u1',
+        name: 'Ana',
+        email: 'ana@exemplo.pt',
+        houseId: 'h1',
+        houseRole: role,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: ObjectDetailScreen(
+            object: UserObject.fromJson({
+              'id': '1',
+              'name': 'Bicicleta',
+              'categoryId': 'c1',
+            }),
+            categoryName: 'Veículos',
+            categories: const [],
+          ),
+        ),
+      );
+    }
+
+    await openAs('member');
+    expect(find.text('ADICIONAR CUIDADO'), findsNothing);
+
+    await openAs('owner');
+    expect(find.text('ADICIONAR CUIDADO'), findsOneWidget);
+
+    Session.clear();
   });
 
   testWidgets('Novo cuidado: objeto já escolhido e valida tarefa e data', (

@@ -5,6 +5,7 @@ import '../models/category.dart';
 import '../models/user_object.dart';
 import '../services/api_exception.dart';
 import '../services/object_service.dart';
+import '../services/session.dart';
 import '../theme/app_spacing.dart';
 import '../utils/date_format.dart';
 import '../widgets/category_chip.dart';
@@ -176,15 +177,18 @@ class ObjectDetailScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  FilledButton(
-                    // Abre o Novo cuidado já com este objeto escolhido.
-                    onPressed: () => _openAndClose(
-                      context,
-                      AddCareScreen(objects: [object], objectId: object.id),
+                  // Só o dono e o gestor criam cuidados; o membro não vê o botão.
+                  if (Session.user?.canManage ?? false) ...[
+                    FilledButton(
+                      // Abre o Novo cuidado já com este objeto escolhido.
+                      onPressed: () => _openAndClose(
+                        context,
+                        AddCareScreen(objects: [object], objectId: object.id),
+                      ),
+                      child: const Text('ADICIONAR CUIDADO'),
                     ),
-                    child: const Text('ADICIONAR CUIDADO'),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
+                    const SizedBox(height: AppSpacing.sm),
+                  ],
                   const OutlinedButton(
                     onPressed: null,
                     child: Text('VER HISTÓRICO'),
