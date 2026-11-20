@@ -34,7 +34,15 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       // IndexedStack mostra só o ecrã ativo, mas mantém os outros em
       // memória: ao voltar a um separador, ele está como o deixámos.
-      body: IndexedStack(index: _currentTab, children: _tabs),
+      // HeroMode: só o separador visível entra nas animações Hero (o mesmo
+      // objeto pode estar no Início e em Objetos, e as etiquetas repetiam-se).
+      body: IndexedStack(
+        index: _currentTab,
+        children: [
+          for (final (index, tab) in _tabs.indexed)
+            HeroMode(enabled: index == _currentTab, child: tab),
+        ],
+      ),
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

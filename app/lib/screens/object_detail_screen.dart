@@ -126,16 +126,20 @@ class ObjectDetailScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 children: [
-                  Container(
-                    height: _photoHeight,
-                    decoration: BoxDecoration(
-                      color: colors.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(AppRadius.lg),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: ObjectPhoto(
-                      photoUrl: object.photoUrl,
-                      iconSize: _photoIconSize,
+                  // Mesma etiqueta do cartão: é aqui que a foto "aterra".
+                  Hero(
+                    tag: ObjectPhoto.heroTag(object.id),
+                    child: Container(
+                      height: _photoHeight,
+                      decoration: BoxDecoration(
+                        color: colors.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: ObjectPhoto(
+                        photoUrl: object.photoUrl,
+                        iconSize: _photoIconSize,
+                      ),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.lg),

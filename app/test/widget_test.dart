@@ -89,7 +89,11 @@ void main() {
       MaterialApp(
         theme: AppTheme.light,
         home: const Scaffold(
-          body: ObjectCard(name: 'Bicicleta urbana', category: 'Veículos'),
+          body: ObjectCard(
+            objectId: 'o1',
+            name: 'Bicicleta urbana',
+            category: 'Veículos',
+          ),
         ),
       ),
     );

@@ -17,6 +17,10 @@ class ObjectPhoto extends StatelessWidget {
   /// Tamanho do ícone quando não há foto (null = tamanho normal, 24).
   final double? iconSize;
 
+  /// Etiqueta da animação Hero da foto (a foto "voa" do cartão para o
+  /// Detalhe). O cartão e o Detalhe têm de usar a mesma etiqueta.
+  static String heroTag(String objectId) => 'object-photo-$objectId';
+
   @override
   Widget build(BuildContext context) {
     final icon = Icon(LucideIcons.package, size: iconSize);

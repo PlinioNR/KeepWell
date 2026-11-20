@@ -175,6 +175,7 @@ class _HomeScreenState extends State<HomeScreen> {
             // Os primeiros objetos, com 16 de espaço entre cartões.
             for (final object in _objects.take(_objectCount)) ...[
               ObjectCard(
+                objectId: object.id,
                 name: object.name,
                 category: _categoryName(object),
                 photoUrl: object.photoUrl,

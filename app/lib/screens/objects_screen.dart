@@ -248,6 +248,7 @@ class _ObjectsScreenState extends State<ObjectsScreen> {
                     final categoryName =
                         _categoryNames[object.categoryId] ?? 'Sem categoria';
                     return ObjectCard(
+                      objectId: object.id,
                       name: object.name,
                       category: categoryName,
                       photoUrl: object.photoUrl,
